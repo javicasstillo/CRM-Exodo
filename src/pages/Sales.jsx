@@ -6,7 +6,8 @@ import html2canvas from 'html2canvas';
 
 const fmt = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(n || 0);
 const PAYMENT_METHODS = ['Efectivo', 'Transferencia', 'Cuotas con tarjeta', 'Cuotas sin tarjeta', 'Cripto', 'Mixto'];
-const EMPTY = { phoneId: '', buyerId: '', salePrice: '', costPrice: '', currency: 'ARS', saleDate: new Date().toISOString().split('T')[0], paymentMethod: 'Efectivo', installments: '', notes: '', status: 'completada', warrantyDays: '30' };
+const SOURCES = ['Instagram', 'Facebook', 'TikTok', 'Recomendación', 'WhatsApp', 'Mercado Libre', 'Otro'];
+const EMPTY = { phoneId: '', buyerId: '', salePrice: '', costPrice: '', currency: 'ARS', saleDate: new Date().toISOString().split('T')[0], paymentMethod: 'Efectivo', installments: '', notes: '', status: 'completada', warrantyDays: '30', source: 'Instagram' };
 
 async function exportRecibo(sale, phone, buyer) {
   const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
@@ -69,7 +70,6 @@ async function exportRecibo(sale, phone, buyer) {
   <div class="watermark">Generado el ${new Date().toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
   </body></html>`;
 
-  // Crear iframe oculto para renderizar el HTML
   const iframe = document.createElement('iframe');
   iframe.style.cssText = 'position:fixed;left:-9999px;top:0;width:780px;height:auto;border:none;';
   document.body.appendChild(iframe);
@@ -98,7 +98,6 @@ async function exportRecibo(sale, phone, buyer) {
   if (imgHeight <= pageHeight) {
     pdf.addImage(imgData, 'PNG', 0, 0, pageWidth, imgHeight);
   } else {
-    // Si el contenido es más largo que una página, lo escala para que entre
     pdf.addImage(imgData, 'PNG', 0, 0, pageWidth, pageHeight);
   }
 
@@ -207,10 +206,19 @@ function Modal({ sale, phones, buyers, onClose, onSave, saving }) {
             </div>
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Notas</label>
-            <textarea className="form-input" rows={2} value={form.notes} onChange={e => set('notes', e.target.value)} placeholder="Observaciones sobre la venta..." />
+          <div className="form-grid form-grid-2">
+            <div className="form-group">
+              <label className="form-label">¿De dónde vino el cliente?</label>
+              <select className="form-input" value={form.source || 'Instagram'} onChange={e => set('source', e.target.value)}>
+                {SOURCES.map(s => <option key={s}>{s}</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Notas</label>
+              <textarea className="form-input" rows={2} value={form.notes} onChange={e => set('notes', e.target.value)} placeholder="Observaciones sobre la venta..." />
+            </div>
           </div>
+
         </div>
         <div className="modal-footer">
           <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
@@ -246,7 +254,7 @@ export default function Sales() {
     const q = search.toLowerCase();
     const phone = getPhone(s.phoneId);
     const buyer = getBuyer(s.buyerId);
-    return (phone?.model?.toLowerCase().includes(q) || buyer?.name?.toLowerCase().includes(q) || s.paymentMethod?.toLowerCase().includes(q))
+    return (phone?.model?.toLowerCase().includes(q) || buyer?.name?.toLowerCase().includes(q) || s.paymentMethod?.toLowerCase().includes(q) || s.source?.toLowerCase().includes(q))
       && (filterStatus === 'todos' || s.status === filterStatus);
   });
 
@@ -255,7 +263,6 @@ export default function Sales() {
     try {
       if (modal === 'new') {
         await salesApi.add(form);
-        // marcar el equipo como vendido
         if (form.phoneId) await phonesApi.update(form.phoneId, { status: 'vendido' });
       } else {
         await salesApi.update(modal.id, form);
@@ -273,6 +280,7 @@ export default function Sales() {
   const totalGanancia = sales.filter(s => s.status === 'completada').reduce((a, s) => a + (Number(s.salePrice || 0) - Number(s.costPrice || 0)), 0);
   const statusBadge = { completada: 'badge-black', pendiente: 'badge-gray', cancelada: 'badge-outline' };
   const payIcon = { 'Efectivo': '💵', 'Transferencia': '📲', 'Cuotas con tarjeta': '💳', 'Cuotas sin tarjeta': '📅', 'Cripto': '₿', 'Mixto': '🔀' };
+  const sourceIcon = { 'Instagram': '📸', 'Facebook': '👤', 'TikTok': '🎵', 'Recomendación': '🤝', 'WhatsApp': '💬', 'Mercado Libre': '🛒', 'Otro': '📌' };
 
   return (
     <>
@@ -299,7 +307,7 @@ export default function Sales() {
         <div className="toolbar">
           <div className="search-box">
             <Search className="search-icon" />
-            <input className="form-input" placeholder="Buscar por modelo, comprador, forma de pago..." value={search} onChange={e => setSearch(e.target.value)} />
+            <input className="form-input" placeholder="Buscar por modelo, comprador, forma de pago, origen..." value={search} onChange={e => setSearch(e.target.value)} />
           </div>
           {['todos', 'completada', 'pendiente', 'cancelada'].map(f => (
             <button key={f} className={`btn btn-sm ${filterStatus === f ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setFilterStatus(f)}>
@@ -321,6 +329,7 @@ export default function Sales() {
                     <th>Precio venta</th>
                     <th>Ganancia</th>
                     <th>Pago</th>
+                    <th>Origen</th>
                     <th>Estado</th>
                     <th></th>
                   </tr>
@@ -345,6 +354,9 @@ export default function Sales() {
                             {payIcon[s.paymentMethod] || ''} {s.paymentMethod}
                             {s.installments && <span style={{ color: 'var(--text3)' }}> · {s.installments}c</span>}
                           </div>
+                        </td>
+                        <td style={{ fontSize: 12 }}>
+                          {s.source ? `${sourceIcon[s.source] || '📌'} ${s.source}` : '—'}
                         </td>
                         <td><span className={`badge ${statusBadge[s.status] || 'badge-gray'}`}>{s.status}</span></td>
                         <td>

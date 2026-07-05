@@ -3,6 +3,8 @@ import { salesApi, phonesApi, expensesApi } from '../api';
 
 const fmt = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(n || 0);
 
+const MONTH_NAMES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
 function Bar({ label, value, max, sub }) {
   const pct = max > 0 ? Math.max(4, (value / max) * 100) : 4;
   return (
@@ -38,6 +40,7 @@ export default function Stats() {
   const gananciaNeta = gananciaBruta - totalGastos;
   const margenProm = totalIngresos > 0 ? ((gananciaBruta / totalIngresos) * 100).toFixed(1) : 0;
 
+  // Modelos más vendidos
   const byModel = {};
   completed.forEach(s => {
     const phone = phones.find(p => p.id === s.phoneId);
@@ -50,6 +53,7 @@ export default function Stats() {
   const modelRanking = Object.entries(byModel).sort((a, b) => b[1].count - a[1].count).slice(0, 6);
   const maxCount = modelRanking[0]?.[1]?.count || 1;
 
+  // Formas de pago
   const byPayment = {};
   completed.forEach(s => {
     const m = s.paymentMethod || 'Otro';
@@ -58,18 +62,51 @@ export default function Stats() {
   });
   const paymentList = Object.entries(byPayment).sort((a, b) => b[1] - a[1]);
 
+  // Origen de clientes
+  const bySource = {};
+  completed.forEach(s => {
+    const src = s.source || 'Sin datos';
+    if (!bySource[src]) bySource[src] = 0;
+    bySource[src]++;
+  });
+  const sourceList = Object.entries(bySource).sort((a, b) => b[1] - a[1]);
+  const sourceIcons = { 'Instagram': '📸', 'Facebook': '👤', 'TikTok': '🎵', 'Recomendación': '🤝', 'WhatsApp': '💬', 'Mercado Libre': '🛒', 'Otro': '📌', 'Sin datos': '—' };
+
+  // Ganancias por mes
   const byMonth = {};
   completed.forEach(s => {
     if (!s.saleDate) return;
-    const key = s.saleDate.slice(0, 7);
-    if (!byMonth[key]) byMonth[key] = { count: 0, revenue: 0, profit: 0 };
+    const key = s.saleDate.slice(0, 7); // YYYY-MM
+    if (!byMonth[key]) byMonth[key] = { count: 0, revenue: 0, profit: 0, costs: 0 };
     byMonth[key].count++;
     byMonth[key].revenue += Number(s.salePrice || 0);
+    byMonth[key].costs += Number(s.costPrice || 0);
     byMonth[key].profit += Number(s.salePrice || 0) - Number(s.costPrice || 0);
   });
-  const monthList = Object.entries(byMonth).sort((a, b) => a[0].localeCompare(b[0])).slice(-6);
-  const maxRevMonth = Math.max(...monthList.map(([, v]) => v.revenue), 1);
 
+  // Gastos por mes
+  expenses.forEach(e => {
+    if (!e.date) return;
+    const key = e.date.slice(0, 7);
+    if (byMonth[key]) {
+      byMonth[key].gastos = (byMonth[key].gastos || 0) + Number(e.amount || 0);
+    }
+  });
+
+  const monthList = Object.entries(byMonth)
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .slice(-6)
+    .map(([key, data]) => {
+      const [year, month] = key.split('-');
+      return {
+        key,
+        label: `${MONTH_NAMES[Number(month) - 1]} ${year}`,
+        ...data,
+        neta: data.profit - (data.gastos || 0),
+      };
+    });
+
+  const maxProfit = Math.max(...monthList.map(m => m.profit), 1);
   const ticketProm = completed.length > 0 ? totalIngresos / completed.length : 0;
 
   return (
@@ -79,6 +116,7 @@ export default function Stats() {
       </div>
       <div className="page-body fade-up">
 
+        {/* KPIs */}
         <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(4,1fr)' }}>
           <div className="stat-card">
             <div className="stat-label">Ingresos totales</div>
@@ -102,7 +140,48 @@ export default function Stats() {
           </div>
         </div>
 
+        {/* GANANCIAS POR MES — tabla detallada */}
+        <div className="card" style={{ marginBottom: 16 }}>
+          <h3 style={{ fontFamily: 'Bebas Neue', fontSize: 18, letterSpacing: 1, marginBottom: 4 }}>Ganancias por mes</h3>
+          <p style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 16 }}>Últimos 6 meses · Ingresos, ganancia bruta y neta</p>
+          {monthList.length === 0
+            ? <p style={{ color: 'var(--text3)', fontSize: 13 }}>Sin datos todavía</p>
+            : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1.5px solid var(--border)' }}>
+                      {['Mes', 'Ventas', 'Ingresos', 'Costos', 'Gan. Bruta', 'Gastos', 'Gan. Neta', 'Margen'].map(h => (
+                        <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--text3)', whiteSpace: 'nowrap' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {monthList.map(m => {
+                      const margen = m.revenue > 0 ? ((m.profit / m.revenue) * 100).toFixed(1) : 0;
+                      return (
+                        <tr key={m.key} style={{ borderBottom: '1px solid var(--border)' }}>
+                          <td style={{ padding: '10px 12px', fontWeight: 600, fontSize: 13 }}>{m.label}</td>
+                          <td style={{ padding: '10px 12px', fontFamily: 'Bebas Neue', fontSize: 15 }}>{m.count}</td>
+                          <td style={{ padding: '10px 12px', fontFamily: 'Bebas Neue', fontSize: 15 }}>{fmt(m.revenue)}</td>
+                          <td style={{ padding: '10px 12px', fontSize: 12, color: 'var(--text3)' }}>{fmt(m.costs)}</td>
+                          <td style={{ padding: '10px 12px', fontFamily: 'Bebas Neue', fontSize: 15 }}>{fmt(m.profit)}</td>
+                          <td style={{ padding: '10px 12px', fontSize: 12, color: 'var(--text3)' }}>{fmt(m.gastos || 0)}</td>
+                          <td style={{ padding: '10px 12px', fontFamily: 'Bebas Neue', fontSize: 15, fontWeight: 700 }}>{fmt(m.neta)}</td>
+                          <td style={{ padding: '10px 12px', fontSize: 12 }}>{margen}%</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )
+          }
+        </div>
+
         <div className="stats-cols" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 4 }}>
+
+          {/* Modelos más vendidos */}
           <div className="card">
             <h3 style={{ fontFamily: 'Bebas Neue', fontSize: 18, letterSpacing: 1, marginBottom: 16 }}>Modelos más vendidos</h3>
             {modelRanking.length === 0
@@ -113,16 +192,28 @@ export default function Stats() {
             }
           </div>
 
+          {/* Origen de clientes */}
           <div className="card">
-            <h3 style={{ fontFamily: 'Bebas Neue', fontSize: 18, letterSpacing: 1, marginBottom: 16 }}>Ingresos por mes</h3>
-            {monthList.length === 0
+            <h3 style={{ fontFamily: 'Bebas Neue', fontSize: 18, letterSpacing: 1, marginBottom: 16 }}>Origen de clientes</h3>
+            {sourceList.length === 0
               ? <p style={{ color: 'var(--text3)', fontSize: 13 }}>Sin datos todavía</p>
-              : monthList.map(([month, data]) => (
-                <Bar key={month} label={month} value={data.revenue} max={maxRevMonth} sub={`${fmt(data.revenue)} · ${data.count} ventas`} />
-              ))
+              : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {sourceList.map(([source, count]) => (
+                    <div key={source} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 12px', background: 'var(--bg3)', borderRadius: 8 }}>
+                      <span style={{ fontSize: 13 }}>{sourceIcons[source] || '📌'} {source}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ fontSize: 11, color: 'var(--text3)' }}>{completed.length > 0 ? ((count / completed.length) * 100).toFixed(0) : 0}%</span>
+                        <span style={{ fontFamily: 'Bebas Neue', fontSize: 16 }}>{count}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
             }
           </div>
 
+          {/* Formas de pago */}
           <div className="card">
             <h3 style={{ fontFamily: 'Bebas Neue', fontSize: 18, letterSpacing: 1, marginBottom: 16 }}>Formas de pago</h3>
             {paymentList.length === 0
@@ -133,7 +224,7 @@ export default function Stats() {
                     <div key={method} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 12px', background: 'var(--bg3)', borderRadius: 8 }}>
                       <span style={{ fontSize: 13 }}>{method}</span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <span style={{ fontSize: 11, color: 'var(--text3)' }}>{((count / completed.length) * 100).toFixed(0)}%</span>
+                        <span style={{ fontSize: 11, color: 'var(--text3)' }}>{completed.length > 0 ? ((count / completed.length) * 100).toFixed(0) : 0}%</span>
                         <span style={{ fontFamily: 'Bebas Neue', fontSize: 16 }}>{count}</span>
                       </div>
                     </div>
@@ -143,6 +234,7 @@ export default function Stats() {
             }
           </div>
 
+          {/* Resumen financiero */}
           <div className="card">
             <h3 style={{ fontFamily: 'Bebas Neue', fontSize: 18, letterSpacing: 1, marginBottom: 16 }}>Resumen financiero</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -163,8 +255,8 @@ export default function Stats() {
               </div>
             </div>
           </div>
-        </div>
 
+        </div>
       </div>
     </>
   );
