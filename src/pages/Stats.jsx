@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { salesApi, phonesApi, expensesApi } from '../api';
+import { SourceLabel } from '../components/SourceIcon';
 
 const fmt = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(n || 0);
 
@@ -70,7 +71,6 @@ export default function Stats() {
     bySource[src]++;
   });
   const sourceList = Object.entries(bySource).sort((a, b) => b[1] - a[1]);
-  const sourceIcons = { 'Instagram': '📸', 'Facebook': '👤', 'TikTok': '🎵', 'Recomendación': '🤝', 'WhatsApp': '💬', 'Mercado Libre': '🛒', 'Otro': '📌', 'Sin datos': '—' };
 
   // Ganancias por mes
   const byMonth = {};
@@ -201,7 +201,7 @@ export default function Stats() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {sourceList.map(([source, count]) => (
                     <div key={source} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 12px', background: 'var(--bg3)', borderRadius: 8 }}>
-                      <span style={{ fontSize: 13 }}>{sourceIcons[source] || '📌'} {source}</span>
+                      <SourceLabel source={source} />
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <span style={{ fontSize: 11, color: 'var(--text3)' }}>{completed.length > 0 ? ((count / completed.length) * 100).toFixed(0) : 0}%</span>
                         <span style={{ fontFamily: 'Bebas Neue', fontSize: 16 }}>{count}</span>

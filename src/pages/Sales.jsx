@@ -3,6 +3,7 @@ import { salesApi, phonesApi, buyersApi } from '../api';
 import { Plus, Search, ShoppingCart, Edit2, Trash2, X, Download, CheckCircle } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { SourceLabel, SourceIcon } from '../components/SourceIcon';
 
 const fmt = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(n || 0);
 const PAYMENT_METHODS = ['Efectivo', 'Transferencia', 'Cuotas con tarjeta', 'Cuotas sin tarjeta', 'Cripto', 'Mixto'];
@@ -280,7 +281,6 @@ export default function Sales() {
   const totalGanancia = sales.filter(s => s.status === 'completada').reduce((a, s) => a + (Number(s.salePrice || 0) - Number(s.costPrice || 0)), 0);
   const statusBadge = { completada: 'badge-black', pendiente: 'badge-gray', cancelada: 'badge-outline' };
   const payIcon = { 'Efectivo': '💵', 'Transferencia': '📲', 'Cuotas con tarjeta': '💳', 'Cuotas sin tarjeta': '📅', 'Cripto': '₿', 'Mixto': '🔀' };
-  const sourceIcon = { 'Instagram': '📸', 'Facebook': '👤', 'TikTok': '🎵', 'Recomendación': '🤝', 'WhatsApp': '💬', 'Mercado Libre': '🛒', 'Otro': '📌' };
 
   return (
     <>
@@ -355,8 +355,8 @@ export default function Sales() {
                             {s.installments && <span style={{ color: 'var(--text3)' }}> · {s.installments}c</span>}
                           </div>
                         </td>
-                        <td style={{ fontSize: 12 }}>
-                          {s.source ? `${sourceIcon[s.source] || '📌'} ${s.source}` : '—'}
+                        <td>
+                          {s.source ? <SourceLabel source={s.source} /> : '—'}
                         </td>
                         <td><span className={`badge ${statusBadge[s.status] || 'badge-gray'}`}>{s.status}</span></td>
                         <td>

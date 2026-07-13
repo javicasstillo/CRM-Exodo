@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { phonesApi } from '../api';
-import { Plus, Search, Smartphone, Edit2, Trash2, X, Camera, ImageOff } from 'lucide-react';
+import { Plus, Search, Smartphone, Edit2, Trash2, X, Camera, ImageOff, Minus } from 'lucide-react';
 
 const fmt = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(n || 0);
 
@@ -32,11 +32,9 @@ const CATEGORIES = {
   'Otro': ['Otro'],
 };
 
-const ALL_MODELS = Object.values(CATEGORIES).flat();
 const STORAGE = ['N/A', '16GB','32GB','64GB','128GB','256GB','512GB','1TB'];
 const CONDITIONS = ['Nuevo', 'Como nuevo', 'Excelente', 'Muy bueno', 'Bueno', 'Regular'];
 const COLORS = ['Negro', 'Blanco', 'Rojo', 'Azul', 'Celeste', 'Verde', 'Amarillo', 'Rosa', 'Morado', 'Natural', 'Titanio', 'Starlight', 'Midnight', 'Otro'];
-
 const CAT_ICON = { 'iPhone': '📱', 'Apple Watch': '⌚', 'AirPods': '🎧', 'Parlante': '🔊', 'Otro': '📦' };
 
 const getCategory = (model) => {
@@ -46,10 +44,13 @@ const getCategory = (model) => {
   return 'Otro';
 };
 
+// iPhones siempre cantidad 1 (son únicos por IMEI), accesorios pueden tener más
+const needsQuantity = (category) => category !== 'iPhone';
+
 const EMPTY = {
   category: 'iPhone', model: 'iPhone 13', storage: '128GB', color: 'Negro', condition: 'Excelente',
   imei: '', serial: '', costPrice: '', salePrice: '', currency: 'ARS',
-  batteryHealth: '', notes: '', status: 'disponible', photo: null,
+  batteryHealth: '', notes: '', status: 'disponible', photo: null, quantity: 1,
 };
 
 function PhotoUploader({ value, onChange }) {
@@ -87,20 +88,44 @@ function PhotoUploader({ value, onChange }) {
   );
 }
 
+function QuantitySelector({ value, onChange }) {
+  const qty = Number(value) || 1;
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 0, border: '1.5px solid var(--border2)', borderRadius: 8, overflow: 'hidden', width: 'fit-content' }}>
+      <button type="button"
+        onClick={() => onChange(Math.max(1, qty - 1))}
+        style={{ padding: '8px 12px', background: 'var(--bg3)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+        <Minus size={14} />
+      </button>
+      <input
+        type="number" min="1" max="999"
+        value={qty}
+        onChange={e => onChange(Math.max(1, Number(e.target.value) || 1))}
+        style={{ width: 52, textAlign: 'center', border: 'none', outline: 'none', fontFamily: 'Bebas Neue', fontSize: 18, background: 'var(--bg)', color: 'var(--text)', padding: '6px 0' }}
+      />
+      <button type="button"
+        onClick={() => onChange(qty + 1)}
+        style={{ padding: '8px 12px', background: 'var(--bg3)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+        <Plus size={14} />
+      </button>
+    </div>
+  );
+}
+
 function Modal({ phone, onClose, onSave, saving }) {
-  const [form, setForm] = useState(phone || EMPTY);
+  const [form, setForm] = useState({ quantity: 1, ...phone } || EMPTY);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   const handleCategory = (cat) => {
     const firstModel = CATEGORIES[cat][0];
-    setForm(f => ({ ...f, category: cat, model: firstModel }));
+    setForm(f => ({ ...f, category: cat, model: firstModel, quantity: cat === 'iPhone' ? 1 : (f.quantity || 1) }));
   };
 
-  const isIphone = form.category === 'iPhone';
   const isWatch = form.category === 'Apple Watch';
   const needsStorage = form.category === 'iPhone' || form.category === 'Apple Watch' || form.category === 'AirPods';
   const needsBattery = form.category === 'iPhone' || form.category === 'Apple Watch';
   const needsImei = form.category === 'iPhone' || form.category === 'Apple Watch';
+  const showQuantity = needsQuantity(form.category);
 
   const margen = form.salePrice && form.costPrice
     ? (((Number(form.salePrice) - Number(form.costPrice)) / Number(form.costPrice)) * 100).toFixed(1)
@@ -116,7 +141,6 @@ function Modal({ phone, onClose, onSave, saving }) {
         <div className="modal-body">
           <PhotoUploader value={form.photo} onChange={v => set('photo', v)} />
 
-          {/* Categoría */}
           <div className="form-group" style={{ marginTop: 14 }}>
             <label className="form-label">Categoría</label>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -148,12 +172,25 @@ function Modal({ phone, onClose, onSave, saving }) {
             </div>
           </div>
 
+          {/* Cantidad — solo para accesorios */}
+          {showQuantity && (
+            <div style={{ background: 'var(--bg3)', borderRadius: 10, padding: '14px 16px', marginBottom: 14 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 12 }}>Cantidad en stock</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                <QuantitySelector value={form.quantity || 1} onChange={v => set('quantity', v)} />
+                <span style={{ fontSize: 12, color: 'var(--text3)' }}>
+                  {form.quantity > 1 ? `Tenés ${form.quantity} unidades de este producto` : '1 unidad disponible'}
+                </span>
+              </div>
+            </div>
+          )}
+
           <div className="form-grid form-grid-3">
             {needsStorage && (
               <div className="form-group">
                 <label className="form-label">Almacenamiento</label>
                 <select className="form-input" value={form.storage} onChange={e => set('storage', e.target.value)}>
-                  {STORAGE.filter(s => s !== 'N/A' || !needsStorage).map(s => <option key={s}>{s}</option>)}
+                  {STORAGE.filter(s => s !== 'N/A').map(s => <option key={s}>{s}</option>)}
                 </select>
               </div>
             )}
@@ -214,6 +251,9 @@ function Modal({ phone, onClose, onSave, saving }) {
             {margen !== null && (
               <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text2)' }}>
                 Ganancia estimada: <strong>{fmt(Number(form.salePrice) - Number(form.costPrice))}</strong> · Margen: <strong>{margen}%</strong>
+                {showQuantity && form.quantity > 1 && (
+                  <span> · Stock total: <strong>{fmt(Number(form.costPrice) * Number(form.quantity))}</strong> invertido</span>
+                )}
               </div>
             )}
           </div>
@@ -266,18 +306,34 @@ export default function Phones() {
     try { await phonesApi.remove(id); } catch (e) { alert(e.message); }
   };
 
+  // Reducir cantidad en 1 rápido desde la card
+  const handleReduceQty = async (p) => {
+    const qty = Number(p.quantity) || 1;
+    if (qty <= 1) {
+      if (!confirm('Solo queda 1 unidad. ¿Querés marcarlo como vendido?')) return;
+      await phonesApi.update(p.id, { status: 'vendido', quantity: 0 });
+    } else {
+      await phonesApi.update(p.id, { quantity: qty - 1 });
+    }
+  };
+
   const badgeStatus = (s) => s === 'disponible' ? 'badge-black' : 'badge-gray';
   const labelStatus = { disponible: 'Disponible', vendido: 'Vendido', reservado: 'Reservado', reparacion: 'Reparación' };
+
+  // Total de unidades disponibles contando quantity
+  const totalUnidades = phones.filter(p => p.status === 'disponible').reduce((a, p) => a + (Number(p.quantity) || 1), 0);
 
   return (
     <>
       <div className="page-header">
-        <div><h2>Stock</h2><p>{phones.filter(p => p.status === 'disponible').length} disponibles · {phones.length} en total</p></div>
+        <div>
+          <h2>Stock</h2>
+          <p>{totalUnidades} unidades disponibles · {phones.filter(p => p.status === 'disponible').length} productos distintos</p>
+        </div>
         <button className="btn btn-primary" onClick={() => setModal('new')}><Plus size={15} /> Agregar producto</button>
       </div>
       <div className="page-body fade-up">
 
-        {/* Filtros de categoría */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
           <button className={`btn btn-sm ${filterCat === 'todas' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setFilterCat('todas')}>
             Todas
@@ -307,6 +363,8 @@ export default function Phones() {
             <div className="phone-grid">
               {filtered.map(p => {
                 const cat = p.category || getCategory(p.model);
+                const qty = Number(p.quantity) || 1;
+                const showQty = needsQuantity(cat);
                 return (
                   <div key={p.id} className="phone-card">
                     <div className="phone-card-img" style={{ position: 'relative', overflow: 'hidden' }}>
@@ -320,6 +378,12 @@ export default function Phones() {
                       <div style={{ position: 'absolute', top: 8, left: 8 }}>
                         <span className="badge badge-gray">{CAT_ICON[cat]} {cat}</span>
                       </div>
+                      {/* Badge de cantidad para accesorios */}
+                      {showQty && p.status === 'disponible' && (
+                        <div style={{ position: 'absolute', bottom: 8, right: 8, background: qty <= 2 ? 'rgba(0,0,0,0.85)' : 'rgba(0,0,0,0.7)', color: '#fff', fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 20, fontFamily: 'Bebas Neue', letterSpacing: 1 }}>
+                          x{qty}
+                        </div>
+                      )}
                       {p.batteryHealth && (
                         <div style={{ position: 'absolute', bottom: 8, left: 8, background: 'rgba(0,0,0,0.7)', color: '#fff', fontSize: 10, padding: '2px 7px', borderRadius: 20 }}>
                           🔋 {p.batteryHealth}%
@@ -339,6 +403,27 @@ export default function Phones() {
                           Costo: {fmt(p.costPrice)} · Ganancia: {fmt(Number(p.salePrice) - Number(p.costPrice))}
                         </div>
                       )}
+
+                      {/* Selector rápido de cantidad en la card */}
+                      {showQty && p.status === 'disponible' && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                          <span style={{ fontSize: 11, color: 'var(--text3)', flex: 1 }}>Stock:</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 0, border: '1px solid var(--border2)', borderRadius: 6, overflow: 'hidden' }}>
+                            <button type="button"
+                              onClick={() => handleReduceQty(p)}
+                              style={{ padding: '3px 8px', background: 'var(--bg3)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                              <Minus size={11} />
+                            </button>
+                            <span style={{ padding: '3px 10px', fontFamily: 'Bebas Neue', fontSize: 15, background: 'var(--bg)', minWidth: 30, textAlign: 'center' }}>{qty}</span>
+                            <button type="button"
+                              onClick={() => phonesApi.update(p.id, { quantity: qty + 1 })}
+                              style={{ padding: '3px 8px', background: 'var(--bg3)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                              <Plus size={11} />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
                       <div className="phone-card-footer">
                         <div className="phone-price">{fmt(p.salePrice)}<span style={{ fontSize: 10, fontFamily: 'DM Sans', color: 'var(--text3)' }}> {p.currency}</span></div>
                         <div style={{ display: 'flex', gap: 6 }}>

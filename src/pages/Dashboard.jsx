@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { phonesApi, salesApi, expensesApi, buyersApi } from '../api';
-import { Smartphone, ShoppingCart, TrendingUp, DollarSign, AlertTriangle, ArrowUpRight, Package, Users } from 'lucide-react';
+import { Smartphone, ShoppingCart, TrendingUp, DollarSign, AlertTriangle, Package, Users } from 'lucide-react';
+import { SourceIcon, SourceLabel } from '../components/SourceIcon';
 
 const fmt = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(n || 0);
-
-const sourceIcon = { 'Instagram': '📸', 'Facebook': '👤', 'TikTok': '🎵', 'Recomendación': '🤝', 'WhatsApp': '💬', 'Mercado Libre': '🛒', 'Otro': '📌' };
 
 export default function Dashboard() {
   const [phones, setPhones] = useState([]);
@@ -20,9 +19,9 @@ export default function Dashboard() {
     return () => { u1(); u2(); u3(); u4(); };
   }, []);
 
-  const stock = phones.filter(p => p.status === 'disponible').length;
+  const stock = phones.filter(p => p.status === 'disponible').reduce((a, p) => a + (Number(p.quantity) || 1), 0);
   const vendidos = phones.filter(p => p.status === 'vendido').length;
-  const reservados = phones.filter(p => p.status === 'reservado').length;
+  const reservados = phones.filter(p => p.status === 'reservado').reduce((a, p) => a + (Number(p.quantity) || 1), 0);
   const completed = sales.filter(s => s.status === 'completada');
   const totalIngresos = completed.reduce((a, s) => a + Number(s.salePrice || 0), 0);
   const totalCostos = completed.reduce((a, s) => a + Number(s.costPrice || 0), 0);
@@ -37,7 +36,6 @@ export default function Dashboard() {
   const getBuyer = (id) => buyers.find(b => b.id === id);
   const sinCosto = phones.filter(p => p.status === 'disponible' && !p.costPrice);
 
-  // Top modelos vendidos
   const byModel = {};
   completed.forEach(s => {
     const phone = phones.find(p => p.id === s.phoneId);
@@ -48,7 +46,6 @@ export default function Dashboard() {
   });
   const topModels = Object.entries(byModel).sort((a, b) => b[1].count - a[1].count).slice(0, 4);
 
-  // Origen de clientes
   const bySource = {};
   completed.forEach(s => {
     const src = s.source || 'Otro';
@@ -57,7 +54,6 @@ export default function Dashboard() {
   });
   const topSources = Object.entries(bySource).sort((a, b) => b[1] - a[1]).slice(0, 4);
 
-  // Ventas del mes actual
   const now = new Date();
   const mesActual = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const ventasMes = completed.filter(s => s.saleDate?.slice(0, 7) === mesActual);
@@ -67,15 +63,11 @@ export default function Dashboard() {
   return (
     <>
       <div className="page-header">
-        <div>
-          <h2>Panel Principal</h2>
-          <p>Resumen general de ÉXODO</p>
-        </div>
+        <div><h2>Panel Principal</h2><p>Resumen general de ÉXODO</p></div>
       </div>
 
       <div className="page-body fade-up">
 
-        {/* ALERTAS */}
         {sinCosto.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
             {sinCosto.map(p => (
@@ -87,43 +79,33 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* FILA 1 — MES ACTUAL destacado + KPIs */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 12, marginBottom: 16 }}>
-
-          {/* Mes actual — card grande negro */}
           <div style={{ background: 'var(--text)', color: 'var(--bg)', borderRadius: 12, padding: '20px 22px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', opacity: 0.6, marginBottom: 8 }}>Este mes</div>
             <div style={{ fontFamily: 'Bebas Neue', fontSize: 26, letterSpacing: 1, lineHeight: 1 }}>{fmt(gananciaMes)}</div>
             <div style={{ fontSize: 11, opacity: 0.6, marginTop: 6 }}>Ganancia · {ventasMes.length} ventas · {fmt(ingresosMes)} ingresos</div>
           </div>
-
           <div className="stat-card">
             <div className="stat-icon"><DollarSign size={16} /></div>
             <div className="stat-label">Ganancia neta total</div>
             <div className="stat-value" style={{ fontSize: 18 }}>{fmt(gananciaNeta)}</div>
             <div className="stat-sub">Margen {margen}%</div>
           </div>
-
           <div className="stat-card">
             <div className="stat-icon"><ShoppingCart size={16} /></div>
             <div className="stat-label">Ventas totales</div>
             <div className="stat-value">{completed.length}</div>
             <div className="stat-sub">Ticket prom. {fmt(ticketProm)}</div>
           </div>
-
           <div className="stat-card">
             <div className="stat-icon"><Package size={16} /></div>
             <div className="stat-label">Stock</div>
             <div className="stat-value">{stock}</div>
             <div className="stat-sub">{vendidos} vendidos · {reservados} reservados</div>
           </div>
-
         </div>
 
-        {/* FILA 2 — Últimas ventas + Stock disponible */}
         <div className="dashboard-cols" style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 14, marginBottom: 14 }}>
-
-          {/* Últimas ventas */}
           <div className="card">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
               <div>
@@ -146,7 +128,10 @@ export default function Dashboard() {
                       </div>
                       <div>
                         <div style={{ fontSize: 13, fontWeight: 500 }}>{phone?.model || '—'}</div>
-                        <div style={{ fontSize: 11, color: 'var(--text3)' }}>{buyer?.name || 'Sin comprador'} · {s.saleDate} {s.source && `· ${sourceIcon[s.source] || ''} ${s.source}`}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                          {buyer?.name || 'Sin comprador'} · {s.saleDate}
+                          {s.source && <><span>·</span><SourceIcon source={s.source} size={12} /></>}
+                        </div>
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
@@ -159,12 +144,11 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Stock disponible */}
           <div className="card">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
               <div>
                 <h3 style={{ fontFamily: 'Bebas Neue', fontSize: 17, letterSpacing: 1 }}>Stock Disponible</h3>
-                <p style={{ fontSize: 11, color: 'var(--text3)' }}>{stock} equipos listos</p>
+                <p style={{ fontSize: 11, color: 'var(--text3)' }}>{stock} unidades · {phones.filter(p => p.status === 'disponible').length} productos</p>
               </div>
               <Smartphone size={16} color="var(--text3)" />
             </div>
@@ -179,18 +163,17 @@ export default function Dashboard() {
                     <div style={{ fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.model}</div>
                     <div style={{ fontSize: 11, color: 'var(--text3)' }}>{p.storage} · {p.color}</div>
                   </div>
-                  <div style={{ fontFamily: 'Bebas Neue', fontSize: 14, flexShrink: 0 }}>{fmt(p.salePrice)}</div>
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <div style={{ fontFamily: 'Bebas Neue', fontSize: 14 }}>{fmt(p.salePrice)}</div>
+                    {(Number(p.quantity) || 1) > 1 && <div style={{ fontSize: 10, color: 'var(--text3)' }}>x{p.quantity} uds.</div>}
+                  </div>
                 </div>
               ))}
             </div>
           </div>
-
         </div>
 
-        {/* FILA 3 — Top modelos + Origen clientes + Resumen financiero */}
         <div className="dashboard-cols" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
-
-          {/* Top modelos */}
           <div className="card">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
               <h3 style={{ fontFamily: 'Bebas Neue', fontSize: 17, letterSpacing: 1 }}>Top Modelos</h3>
@@ -215,7 +198,6 @@ export default function Dashboard() {
             }
           </div>
 
-          {/* Origen de clientes */}
           <div className="card">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
               <h3 style={{ fontFamily: 'Bebas Neue', fontSize: 17, letterSpacing: 1 }}>Origen Clientes</h3>
@@ -227,9 +209,9 @@ export default function Dashboard() {
                 const pct = completed.length > 0 ? Math.round((count / completed.length) * 100) : 0;
                 return (
                   <div key={source} style={{ marginBottom: 12 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5, fontSize: 12 }}>
-                      <span>{sourceIcon[source] || '📌'} {source}</span>
-                      <span style={{ fontWeight: 600 }}>{count} · {pct}%</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+                      <SourceLabel source={source} />
+                      <span style={{ fontSize: 12, fontWeight: 600 }}>{count} · {pct}%</span>
                     </div>
                     <div style={{ height: 6, background: 'var(--bg3)', borderRadius: 20, overflow: 'hidden' }}>
                       <div style={{ height: '100%', width: `${Math.max(pct, 4)}%`, background: 'var(--text)', borderRadius: 20, transition: 'width 0.5s ease' }} />
@@ -240,7 +222,6 @@ export default function Dashboard() {
             }
           </div>
 
-          {/* Resumen financiero */}
           <div className="card">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
               <h3 style={{ fontFamily: 'Bebas Neue', fontSize: 17, letterSpacing: 1 }}>Financiero</h3>
@@ -264,7 +245,6 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-
         </div>
 
       </div>
