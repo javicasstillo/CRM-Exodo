@@ -25,9 +25,30 @@ const CATEGORIES = {
     'AirPods Pro', 'AirPods Pro 2',
     'AirPods Max',
   ],
-  'Parlante': [
+    'Parlante': [
     'JBL Go 4', 'JBL Go 4 Pro',
     'JBL Flip 6', 'JBL Charge 5', 'JBL Xtreme 3',
+  ],
+  'Cargador': [
+    'Cargador Apple 20W Original',
+    'Cargador Apple 20W Replica',
+    'Cargador Apple 35W Original',
+    'Cargador Apple 35W Replica',
+    'Cargador Apple 67W Original',
+    'Cargador Apple 67W Replica',
+    'Cargador MagSafe Original',
+    'Cargador MagSafe Replica',
+    'Cable USB-C a Lightning Original',
+    'Cable USB-C a Lightning Replica',
+    'Cable USB-C a USB-C Original',
+    'Cable USB-C a USB-C Replica',
+  ],
+  'Battery Pack': [
+    'Battery Pack MagSafe Original',
+    'Battery Pack MagSafe Replica',
+    'Battery Pack USB-C 5000mAh',
+    'Battery Pack USB-C 10000mAh',
+    'Battery Pack USB-C 20000mAh',
   ],
   'Otro': ['Otro'],
 };
@@ -35,7 +56,7 @@ const CATEGORIES = {
 const STORAGE = ['N/A', '16GB','32GB','64GB','128GB','256GB','512GB','1TB'];
 const CONDITIONS = ['Nuevo', 'Como nuevo', 'Excelente', 'Muy bueno', 'Bueno', 'Regular'];
 const COLORS = ['Negro', 'Blanco', 'Rojo', 'Azul', 'Celeste', 'Verde', 'Amarillo', 'Rosa', 'Morado', 'Natural', 'Titanio', 'Starlight', 'Midnight', 'Otro'];
-const CAT_ICON = { 'iPhone': '📱', 'Apple Watch': '⌚', 'AirPods': '🎧', 'Parlante': '🔊', 'Otro': '📦' };
+const CAT_ICON = { 'iPhone': '📱', 'Apple Watch': '⌚', 'AirPods': '🎧', 'Parlante': '🔊', 'Cargador': '🔌', 'Battery Pack': '🔋', 'Otro': '📦' };
 
 const getCategory = (model) => {
   for (const [cat, models] of Object.entries(CATEGORIES)) {
