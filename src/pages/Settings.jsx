@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
-import { saveBusinessConfig, updateUserProfile, registerUser } from '../firebase';
+import { saveBusinessConfig, updateUserProfile, createInvitation } from '../firebase';
 import { useToast } from '../context/ToastContext';
-import { Building2, Users, Plus, Camera, Save, X, Eye, EyeOff, Shield, Trash2 } from 'lucide-react';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { Building2, Users, Plus, Camera, Save, X, Shield, Trash2, Copy, Check, Mail, Clock } from 'lucide-react';
+import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 
 const ROLE_LABELS = { admin: 'Administrador', vendedor: 'Vendedor', viewer: 'Solo lectura' };
@@ -34,73 +34,98 @@ function AvatarUploader({ value, onChange, size = 80 }) {
   );
 }
 
-function NewUserModal({ businessId, onClose, onSaved }) {
-  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'vendedor' });
-  const [show, setShow] = useState(false);
+function InviteModal({ profile, business, onClose }) {
+  const [form, setForm] = useState({ email: '', role: 'vendedor' });
+  const [link, setLink] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [copied, setCopied] = useState(false);
   const toast = useToast();
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
-  const handleSave = async () => {
-    if (!form.name || !form.email || !form.password) { toast('Completá todos los campos', 'warning'); return; }
-    if (form.password.length < 6) { toast('La contraseña debe tener al menos 6 caracteres', 'warning'); return; }
+  const handleGenerate = async () => {
+    if (!form.email) { toast('Ingresá un email', 'warning'); return; }
     setSaving(true);
     try {
-      await registerUser({ ...form, businessId });
-      toast(`Usuario ${form.name} creado correctamente`, 'success');
-      onSaved();
-      onClose();
+      const code = await createInvitation({
+        email: form.email,
+        role: form.role,
+        businessId: profile.businessId,
+        businessName: business?.name || 'el negocio',
+      });
+      const url = `${window.location.origin}/invite/${code}`;
+      setLink(url);
+      toast('Invitación generada', 'success');
     } catch (e) { toast(e.message, 'error'); } finally { setSaving(false); }
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(link);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal">
         <div className="modal-header">
-          <h3>Nuevo Usuario</h3>
+          <h3>Invitar usuario</h3>
           <button className="btn btn-sm btn-secondary" onClick={onClose}><X size={14} /></button>
         </div>
         <div className="modal-body">
-          <div className="form-group">
-            <label className="form-label">Nombre completo</label>
-            <input className="form-input" placeholder="Juan Pérez" value={form.name} onChange={e => set('name', e.target.value)} autoFocus />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Email</label>
-            <input className="form-input" type="email" placeholder="juan@negocio.com" value={form.email} onChange={e => set('email', e.target.value)} />
-          </div>
-          <div className="form-grid form-grid-2">
-            <div className="form-group">
-              <label className="form-label">Contraseña</label>
-              <div style={{ position: 'relative' }}>
-                <input className="form-input" type={show ? 'text' : 'password'} placeholder="mínimo 6 caracteres" value={form.password} onChange={e => set('password', e.target.value)} style={{ paddingRight: 36 }} />
-                <button type="button" onClick={() => setShow(s => !s)} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', padding: 0 }}>
-                  {show ? <EyeOff size={14} /> : <Eye size={14} />}
+          {!link ? (
+            <>
+              <div style={{ background: 'var(--primary-bg)', border: '1px solid rgba(13,110,253,0.2)', borderRadius: 10, padding: '12px 14px', fontSize: 12, color: 'var(--primary)', marginBottom: 16, display: 'flex', gap: 8 }}>
+                <Mail size={14} style={{ flexShrink: 0, marginTop: 1 }} />
+                <span>Generá un link de invitación y compartilo por WhatsApp o email. El usuario se registra solo con su propia contraseña. El link expira en <strong>7 días</strong>.</span>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Email del usuario</label>
+                <input className="form-input" type="email" placeholder="vendedor@negocio.com" value={form.email} onChange={e => set('email', e.target.value)} autoFocus />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Rol</label>
+                <select className="form-input" value={form.role} onChange={e => set('role', e.target.value)}>
+                  <option value="admin">Administrador — acceso total</option>
+                  <option value="vendedor">Vendedor — registra ventas y ve stock</option>
+                  <option value="viewer">Solo lectura — solo puede ver</option>
+                </select>
+              </div>
+            </>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={{ textAlign: 'center', padding: '10px 0' }}>
+                <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#f0fdf4', border: '2px solid #bbf7d0', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+                  <Check size={24} color="#16a34a" />
+                </div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>¡Link generado!</div>
+                <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 4 }}>Compartilo con <strong>{form.email}</strong></div>
+              </div>
+
+              <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 14px' }}>
+                <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <Clock size={11} /> Expira en 7 días · Un solo uso
+                </div>
+                <div style={{ fontSize: 12, wordBreak: 'break-all', color: 'var(--text2)', marginBottom: 10 }}>{link}</div>
+                <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={handleCopy}>
+                  {copied ? <><Check size={14} /> Copiado!</> : <><Copy size={14} /> Copiar link</>}
                 </button>
               </div>
+
+              <button className="btn btn-secondary" style={{ justifyContent: 'center' }}
+                onClick={() => { setLink(null); setForm({ email: '', role: 'vendedor' }); }}>
+                Generar otra invitación
+              </button>
             </div>
-            <div className="form-group">
-              <label className="form-label">Rol</label>
-              <select className="form-input" value={form.role} onChange={e => set('role', e.target.value)}>
-                <option value="admin">Administrador</option>
-                <option value="vendedor">Vendedor</option>
-                <option value="viewer">Solo lectura</option>
-              </select>
-            </div>
-          </div>
-          <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 14px', fontSize: 12, color: 'var(--text3)' }}>
-            <strong style={{ color: 'var(--text2)' }}>Permisos por rol:</strong><br />
-            <strong>Administrador</strong> — acceso total, configuración, usuarios<br />
-            <strong>Vendedor</strong> — puede registrar ventas y ver stock<br />
-            <strong>Solo lectura</strong> — solo puede ver, no modificar
-          </div>
+          )}
         </div>
-        <div className="modal-footer">
-          <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
-          <button className="btn btn-primary" disabled={saving} onClick={handleSave}>
-            {saving ? 'Creando...' : 'Crear usuario'}
-          </button>
-        </div>
+        {!link && (
+          <div className="modal-footer">
+            <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
+            <button className="btn btn-primary" disabled={saving} onClick={handleGenerate}>
+              {saving ? 'Generando...' : 'Generar link'}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -114,7 +139,7 @@ export default function Settings() {
   const [profForm, setProfForm] = useState(null);
   const [users, setUsers] = useState([]);
   const [saving, setSaving] = useState(false);
-  const [newUserModal, setNewUserModal] = useState(false);
+  const [inviteModal, setInviteModal] = useState(false);
 
   useEffect(() => {
     if (business) setBizForm({ ...business });
@@ -148,12 +173,20 @@ export default function Settings() {
     } catch (e) { toast(e.message, 'error'); } finally { setSaving(false); }
   };
 
+  const toggleUserActive = async (u) => {
+    if (!confirm(`¿${u.active !== false ? 'Desactivar' : 'Activar'} a ${u.name}?`)) return;
+    try {
+      await updateDoc(doc(db, 'users', u.id), { active: u.active === false ? true : false });
+      toast(`Usuario ${u.active !== false ? 'desactivado' : 'activado'}`, 'info');
+    } catch (e) { toast(e.message, 'error'); }
+  };
+
   const isAdmin = profile?.role === 'admin';
 
   const TABS = [
-    { id: 'negocio',   label: 'Negocio',    icon: Building2 },
-    { id: 'perfil',    label: 'Mi perfil',   icon: Users },
-    { id: 'usuarios',  label: 'Usuarios',    icon: Shield },
+    { id: 'negocio',  label: 'Negocio',   icon: Building2 },
+    { id: 'perfil',   label: 'Mi perfil',  icon: Users },
+    { id: 'usuarios', label: 'Usuarios',   icon: Shield },
   ];
 
   return (
@@ -163,7 +196,6 @@ export default function Settings() {
       </div>
       <div className="page-body fade-up">
 
-        {/* Tabs */}
         <div style={{ display: 'flex', gap: 4, marginBottom: 24, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: 4, width: 'fit-content' }}>
           {TABS.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
@@ -276,8 +308,8 @@ export default function Settings() {
                 <p style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2 }}>{users.length} usuario{users.length !== 1 ? 's' : ''} registrado{users.length !== 1 ? 's' : ''}</p>
               </div>
               {isAdmin && (
-                <button className="btn btn-primary" onClick={() => setNewUserModal(true)}>
-                  <Plus size={14} /> Nuevo usuario
+                <button className="btn btn-primary" onClick={() => setInviteModal(true)}>
+                  <Plus size={14} /> Invitar usuario
                 </button>
               )}
             </div>
@@ -323,7 +355,10 @@ export default function Settings() {
                       </td>
                       <td>
                         {isAdmin && u.id !== profile?.id && (
-                          <button className="btn btn-sm btn-danger" title="Desactivar">
+                          <button
+                            className={`btn btn-sm ${u.active !== false ? 'btn-danger' : 'btn-secondary'}`}
+                            onClick={() => toggleUserActive(u)}
+                            title={u.active !== false ? 'Desactivar' : 'Activar'}>
                             <Trash2 size={12} />
                           </button>
                         )}
@@ -337,11 +372,11 @@ export default function Settings() {
         )}
 
       </div>
-      {newUserModal && (
-        <NewUserModal
-          businessId={profile?.businessId}
-          onClose={() => setNewUserModal(false)}
-          onSaved={() => {}}
+      {inviteModal && (
+        <InviteModal
+          profile={profile}
+          business={business}
+          onClose={() => setInviteModal(false)}
         />
       )}
     </>

@@ -58,3 +58,43 @@ export const getBusinessConfig = async (businessId) => {
 export const saveBusinessConfig = async (businessId, data) => {
   await setDoc(doc(db, 'businesses', businessId), { ...data, updatedAt: serverTimestamp() }, { merge: true });
 };
+
+// ── Invitaciones ──────────────────────────────────────────
+export const createInvitation = async ({ email, role, businessId, businessName }) => {
+  const code = Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+  await setDoc(doc(db, 'invitations', code), {
+    email, role, businessId, businessName,
+    used: false,
+    createdAt: serverTimestamp(),
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 días
+  });
+  return code;
+};
+
+export const getInvitation = async (code) => {
+  const snap = await getDoc(doc(db, 'invitations', code));
+  return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+};
+
+export const markInvitationUsed = async (code) => {
+  await updateDoc(doc(db, 'invitations', code), { used: true });
+};
+
+export const registerWithInvitation = async ({ code, name, password }) => {
+  const inv = await getInvitation(code);
+  if (!inv) throw new Error('Invitación inválida');
+  if (inv.used) throw new Error('Esta invitación ya fue usada');
+  if (new Date() > inv.expiresAt.toDate()) throw new Error('La invitación expiró');
+
+  const cred = await createUserWithEmailAndPassword(auth, inv.email, password);
+  await updateProfile(cred.user, { displayName: name });
+  await setDoc(doc(db, 'users', cred.user.uid), {
+    name, email: inv.email,
+    role: inv.role,
+    businessId: inv.businessId,
+    createdAt: serverTimestamp(),
+    active: true,
+  });
+  await markInvitationUsed(code);
+  return cred.user;
+};
