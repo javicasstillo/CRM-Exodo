@@ -1,21 +1,33 @@
 import { useState, useEffect } from 'react';
 import { salesApi, phonesApi, expensesApi } from '../api';
 import { SourceLabel } from '../components/SourceIcon';
+import { TrendingUp, DollarSign, ShoppingCart, BarChart2 } from 'lucide-react';
 
 const fmt = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(n || 0);
 
 const MONTH_NAMES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
+const SOURCE_BAR_CLASS = {
+  'Instagram':     'progress-bar--instagram',
+  'Facebook':      'progress-bar--facebook',
+  'TikTok':        'progress-bar--tiktok',
+  'WhatsApp':      'progress-bar--whatsapp',
+  'Mercado Libre': 'progress-bar--mercadolibre',
+  'Recomendación': 'progress-bar--recomendacion',
+  'Otro':          'progress-bar--otro',
+  'Sin datos':     'progress-bar--otro',
+};
+
 function Bar({ label, value, max, sub }) {
   const pct = max > 0 ? Math.max(4, (value / max) * 100) : 4;
   return (
     <div style={{ marginBottom: 14 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5, fontSize: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: 12 }}>
         <span style={{ color: 'var(--text2)', fontWeight: 500 }}>{label}</span>
-        <span style={{ fontFamily: 'Bebas Neue', fontSize: 14 }}>{sub}</span>
+        <span style={{ fontWeight: 700, color: 'var(--text)', fontSize: 12 }}>{sub}</span>
       </div>
-      <div style={{ height: 8, background: 'var(--bg3)', borderRadius: 20, overflow: 'hidden' }}>
-        <div style={{ height: '100%', width: `${pct}%`, background: 'var(--text)', borderRadius: 20, transition: 'width 0.6s ease' }} />
+      <div className="progress-wrap">
+        <div className="progress-bar progress-bar--default" style={{ width: `${pct}%` }} />
       </div>
     </div>
   );
@@ -40,6 +52,7 @@ export default function Stats() {
   const gananciaBruta = totalIngresos - totalCostos;
   const gananciaNeta = gananciaBruta - totalGastos;
   const margenProm = totalIngresos > 0 ? ((gananciaBruta / totalIngresos) * 100).toFixed(1) : 0;
+  const ticketProm = completed.length > 0 ? totalIngresos / completed.length : 0;
 
   // Modelos más vendidos
   const byModel = {};
@@ -62,6 +75,7 @@ export default function Stats() {
     byPayment[m]++;
   });
   const paymentList = Object.entries(byPayment).sort((a, b) => b[1] - a[1]);
+  const maxPayment = paymentList[0]?.[1] || 1;
 
   // Origen de clientes
   const bySource = {};
@@ -76,7 +90,7 @@ export default function Stats() {
   const byMonth = {};
   completed.forEach(s => {
     if (!s.saleDate) return;
-    const key = s.saleDate.slice(0, 7); // YYYY-MM
+    const key = s.saleDate.slice(0, 7);
     if (!byMonth[key]) byMonth[key] = { count: 0, revenue: 0, profit: 0, costs: 0 };
     byMonth[key].count++;
     byMonth[key].revenue += Number(s.salePrice || 0);
@@ -84,7 +98,6 @@ export default function Stats() {
     byMonth[key].profit += Number(s.salePrice || 0) - Number(s.costPrice || 0);
   });
 
-  // Gastos por mes
   expenses.forEach(e => {
     if (!e.date) return;
     const key = e.date.slice(0, 7);
@@ -107,7 +120,6 @@ export default function Stats() {
     });
 
   const maxProfit = Math.max(...monthList.map(m => m.profit), 1);
-  const ticketProm = completed.length > 0 ? totalIngresos / completed.length : 0;
 
   return (
     <>
@@ -119,56 +131,90 @@ export default function Stats() {
         {/* KPIs */}
         <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(4,1fr)' }}>
           <div className="stat-card">
+            <div className="stat-icon"><DollarSign size={16} /></div>
             <div className="stat-label">Ingresos totales</div>
             <div className="stat-value" style={{ fontSize: 19 }}>{fmt(totalIngresos)}</div>
             <div className="stat-sub">{completed.length} ventas</div>
           </div>
           <div className="stat-card">
+            <div className="stat-icon"><TrendingUp size={16} /></div>
             <div className="stat-label">Ganancia bruta</div>
             <div className="stat-value" style={{ fontSize: 19 }}>{fmt(gananciaBruta)}</div>
             <div className="stat-sub">Margen: {margenProm}%</div>
           </div>
           <div className="stat-card">
+            <div className="stat-icon"><BarChart2 size={16} /></div>
             <div className="stat-label">Ganancia neta</div>
             <div className="stat-value" style={{ fontSize: 19 }}>{fmt(gananciaNeta)}</div>
             <div className="stat-sub">Gastos descontados</div>
           </div>
           <div className="stat-card">
+            <div className="stat-icon"><ShoppingCart size={16} /></div>
             <div className="stat-label">Ticket promedio</div>
             <div className="stat-value" style={{ fontSize: 19 }}>{fmt(ticketProm)}</div>
             <div className="stat-sub">Por venta</div>
           </div>
         </div>
 
-        {/* GANANCIAS POR MES — tabla detallada */}
+        {/* GANANCIAS POR MES */}
         <div className="card" style={{ marginBottom: 16 }}>
-          <h3 style={{ fontFamily: 'Bebas Neue', fontSize: 18, letterSpacing: 1, marginBottom: 4 }}>Ganancias por mes</h3>
-          <p style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 16 }}>Últimos 6 meses · Ingresos, ganancia bruta y neta</p>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+            <div>
+              <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>Ganancias por mes</h3>
+              <p style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>Últimos 6 meses · Ingresos, ganancia bruta y neta</p>
+            </div>
+            <div style={{ width: 32, height: 32, borderRadius: 10, background: 'var(--primary-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <TrendingUp size={15} color="var(--primary)" />
+            </div>
+          </div>
+
+          {/* Mini barras por mes */}
+          {monthList.length > 0 && (
+            <div style={{ display: 'flex', gap: 8, margin: '16px 0', alignItems: 'flex-end', height: 60 }}>
+              {monthList.map(m => {
+                const h = Math.max(8, (m.profit / maxProfit) * 60);
+                return (
+                  <div key={m.key} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                    <div style={{ width: '100%', height: h, borderRadius: 6, background: 'var(--primary)', opacity: 0.85, transition: 'height 0.6s ease', position: 'relative', overflow: 'hidden' }}>
+                      <div style={{ position: 'absolute', top: 0, left: '-60%', width: '40%', height: '100%', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)', animation: 'shimmer 2s infinite' }} />
+                    </div>
+                    <span style={{ fontSize: 9, color: 'var(--text3)', fontWeight: 600, whiteSpace: 'nowrap' }}>{m.label.split(' ')[0]}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
           {monthList.length === 0
-            ? <p style={{ color: 'var(--text3)', fontSize: 13 }}>Sin datos todavía</p>
+            ? <p style={{ color: 'var(--text3)', fontSize: 13, marginTop: 16 }}>Sin datos todavía</p>
             : (
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
-                    <tr style={{ borderBottom: '1.5px solid var(--border)' }}>
+                    <tr style={{ background: 'var(--bg2)', borderRadius: 8 }}>
                       {['Mes', 'Ventas', 'Ingresos', 'Costos', 'Gan. Bruta', 'Gastos', 'Gan. Neta', 'Margen'].map(h => (
-                        <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--text3)', whiteSpace: 'nowrap' }}>{h}</th>
+                        <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--text3)', whiteSpace: 'nowrap', borderBottom: '1px solid var(--border)' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {monthList.map(m => {
+                    {monthList.map((m, idx) => {
                       const margen = m.revenue > 0 ? ((m.profit / m.revenue) * 100).toFixed(1) : 0;
+                      const isLast = idx === monthList.length - 1;
                       return (
-                        <tr key={m.key} style={{ borderBottom: '1px solid var(--border)' }}>
-                          <td style={{ padding: '10px 12px', fontWeight: 600, fontSize: 13 }}>{m.label}</td>
-                          <td style={{ padding: '10px 12px', fontFamily: 'Bebas Neue', fontSize: 15 }}>{m.count}</td>
-                          <td style={{ padding: '10px 12px', fontFamily: 'Bebas Neue', fontSize: 15 }}>{fmt(m.revenue)}</td>
-                          <td style={{ padding: '10px 12px', fontSize: 12, color: 'var(--text3)' }}>{fmt(m.costs)}</td>
-                          <td style={{ padding: '10px 12px', fontFamily: 'Bebas Neue', fontSize: 15 }}>{fmt(m.profit)}</td>
-                          <td style={{ padding: '10px 12px', fontSize: 12, color: 'var(--text3)' }}>{fmt(m.gastos || 0)}</td>
-                          <td style={{ padding: '10px 12px', fontFamily: 'Bebas Neue', fontSize: 15, fontWeight: 700 }}>{fmt(m.neta)}</td>
-                          <td style={{ padding: '10px 12px', fontSize: 12 }}>{margen}%</td>
+                        <tr key={m.key} style={{ borderBottom: '1px solid var(--border)', background: isLast ? 'var(--primary-bg)' : 'transparent', transition: 'background 0.15s' }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'var(--bg2)'}
+                          onMouseLeave={e => e.currentTarget.style.background = isLast ? 'var(--primary-bg)' : 'transparent'}>
+                          <td style={{ padding: '11px 14px', fontWeight: 700, fontSize: 13, color: isLast ? 'var(--primary)' : 'var(--text)' }}>{m.label}</td>
+                          <td style={{ padding: '11px 14px', fontSize: 13, fontWeight: 600 }}>{m.count}</td>
+                          <td style={{ padding: '11px 14px', fontSize: 13, fontWeight: 600 }}>{fmt(m.revenue)}</td>
+                          <td style={{ padding: '11px 14px', fontSize: 12, color: 'var(--text3)' }}>{fmt(m.costs)}</td>
+                          <td style={{ padding: '11px 14px', fontSize: 13, fontWeight: 600, color: 'var(--primary)' }}>{fmt(m.profit)}</td>
+                          <td style={{ padding: '11px 14px', fontSize: 12, color: 'var(--text3)' }}>{fmt(m.gastos || 0)}</td>
+                          <td style={{ padding: '11px 14px', fontSize: 14, fontWeight: 800, color: 'var(--primary)' }}>{fmt(m.neta)}</td>
+                          <td style={{ padding: '11px 14px', fontSize: 12 }}>
+                            <span style={{ background: 'var(--primary-bg)', color: 'var(--primary)', padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>{margen}%</span>
+                          </td>
                         </tr>
                       );
                     })}
@@ -183,75 +229,106 @@ export default function Stats() {
 
           {/* Modelos más vendidos */}
           <div className="card">
-            <h3 style={{ fontFamily: 'Bebas Neue', fontSize: 18, letterSpacing: 1, marginBottom: 16 }}>Modelos más vendidos</h3>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+              <h3 style={{ fontSize: 15, fontWeight: 700 }}>Modelos más vendidos</h3>
+              <div style={{ width: 32, height: 32, borderRadius: 10, background: 'var(--primary-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <TrendingUp size={15} color="var(--primary)" />
+              </div>
+            </div>
             {modelRanking.length === 0
               ? <p style={{ color: 'var(--text3)', fontSize: 13 }}>Sin datos todavía</p>
               : modelRanking.map(([model, data]) => (
-                <Bar key={model} label={model} value={data.count} max={maxCount} sub={`${data.count} un. · ${fmt(data.profit)} ganancia`} />
+                <Bar key={model} label={model} value={data.count} max={maxCount} sub={`${data.count} un. · ${fmt(data.profit)}`} />
               ))
             }
           </div>
 
-          {/* Origen de clientes */}
+          {/* Origen de clientes — barras de colores con shimmer */}
           <div className="card">
-            <h3 style={{ fontFamily: 'Bebas Neue', fontSize: 18, letterSpacing: 1, marginBottom: 16 }}>Origen de clientes</h3>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+              <h3 style={{ fontSize: 15, fontWeight: 700 }}>Origen de clientes</h3>
+              <div style={{ width: 32, height: 32, borderRadius: 10, background: 'var(--primary-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <BarChart2 size={15} color="var(--primary)" />
+              </div>
+            </div>
             {sourceList.length === 0
               ? <p style={{ color: 'var(--text3)', fontSize: 13 }}>Sin datos todavía</p>
-              : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {sourceList.map(([source, count]) => (
-                    <div key={source} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 12px', background: 'var(--bg3)', borderRadius: 8 }}>
+              : sourceList.map(([source, count]) => {
+                const pct = completed.length > 0 ? Math.round((count / completed.length) * 100) : 0;
+                const barClass = SOURCE_BAR_CLASS[source] || 'progress-bar--default';
+                return (
+                  <div key={source} style={{ marginBottom: 16 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 7 }}>
                       <SourceLabel source={source} />
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <span style={{ fontSize: 11, color: 'var(--text3)' }}>{completed.length > 0 ? ((count / completed.length) * 100).toFixed(0) : 0}%</span>
-                        <span style={{ fontFamily: 'Bebas Neue', fontSize: 16 }}>{count}</span>
-                      </div>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text2)' }}>{count} · {pct}%</span>
                     </div>
-                  ))}
-                </div>
-              )
+                    <div className="progress-wrap">
+                      <div
+                        className={`progress-bar ${barClass}`}
+                        style={{ width: `${Math.max(pct, 4)}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })
             }
           </div>
 
-          {/* Formas de pago */}
+          {/* Formas de pago — barras azules con shimmer */}
           <div className="card">
-            <h3 style={{ fontFamily: 'Bebas Neue', fontSize: 18, letterSpacing: 1, marginBottom: 16 }}>Formas de pago</h3>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+              <h3 style={{ fontSize: 15, fontWeight: 700 }}>Formas de pago</h3>
+              <div style={{ width: 32, height: 32, borderRadius: 10, background: 'var(--primary-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <ShoppingCart size={15} color="var(--primary)" />
+              </div>
+            </div>
             {paymentList.length === 0
               ? <p style={{ color: 'var(--text3)', fontSize: 13 }}>Sin datos todavía</p>
-              : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {paymentList.map(([method, count]) => (
-                    <div key={method} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 12px', background: 'var(--bg3)', borderRadius: 8 }}>
-                      <span style={{ fontSize: 13 }}>{method}</span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <span style={{ fontSize: 11, color: 'var(--text3)' }}>{completed.length > 0 ? ((count / completed.length) * 100).toFixed(0) : 0}%</span>
-                        <span style={{ fontFamily: 'Bebas Neue', fontSize: 16 }}>{count}</span>
-                      </div>
+              : paymentList.map(([method, count]) => {
+                const pct = completed.length > 0 ? Math.round((count / completed.length) * 100) : 0;
+                return (
+                  <div key={method} style={{ marginBottom: 16 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 7 }}>
+                      <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text2)' }}>{method}</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text2)' }}>{count} · {pct}%</span>
                     </div>
-                  ))}
-                </div>
-              )
+                    <div className="progress-wrap">
+                      <div className="progress-bar progress-bar--default" style={{ width: `${Math.max(pct, 4)}%` }} />
+                    </div>
+                  </div>
+                );
+              })
             }
           </div>
 
           {/* Resumen financiero */}
           <div className="card">
-            <h3 style={{ fontFamily: 'Bebas Neue', fontSize: 18, letterSpacing: 1, marginBottom: 16 }}>Resumen financiero</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+              <h3 style={{ fontSize: 15, fontWeight: 700 }}>Resumen financiero</h3>
+              <div style={{ width: 32, height: 32, borderRadius: 10, background: 'var(--primary-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <DollarSign size={15} color="var(--primary)" />
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
               {[
                 { label: 'Total ingresos (ventas)', value: fmt(totalIngresos) },
                 { label: 'Total costos (equipos)', value: `− ${fmt(totalCostos)}` },
-                { label: 'Ganancia bruta', value: fmt(gananciaBruta), bold: true },
+                { label: 'Ganancia bruta', value: fmt(gananciaBruta), highlight: true },
                 { label: 'Total gastos operativos', value: `− ${fmt(totalGastos)}` },
               ].map((row, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--border)', fontSize: 13 }}>
-                  <span style={{ color: 'var(--text2)' }}>{row.label}</span>
-                  <span style={{ fontFamily: 'Bebas Neue', fontSize: 15, fontWeight: row.bold ? 700 : 400 }}>{row.value}</span>
+                <div key={i} style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  padding: '10px 0',
+                  borderBottom: row.highlight ? '2px solid var(--primary)' : '1px solid var(--border)',
+                  fontSize: 13,
+                }}>
+                  <span style={{ color: 'var(--text3)', fontWeight: 500 }}>{row.label}</span>
+                  <span style={{ fontWeight: 700, color: row.highlight ? 'var(--primary)' : 'var(--text)' }}>{row.value}</span>
                 </div>
               ))}
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0 0', fontSize: 14 }}>
-                <span style={{ fontWeight: 700 }}>GANANCIA NETA</span>
-                <span style={{ fontFamily: 'Bebas Neue', fontSize: 20 }}>{fmt(gananciaNeta)}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 0 0' }}>
+                <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>GANANCIA NETA</span>
+                <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--primary)' }}>{fmt(gananciaNeta)}</span>
               </div>
             </div>
           </div>
