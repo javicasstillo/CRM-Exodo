@@ -1,9 +1,48 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { buyersApi, salesApi, phonesApi } from '../api';
-import { Plus, Search, Users, Edit2, Trash2, X, Phone, Mail } from 'lucide-react';
+import { Plus, Search, Users, Edit2, Trash2, X, Phone, Mail, Camera, ImageOff } from 'lucide-react';
+import { useToast } from '../context/ToastContext';
 
 const fmt = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(n || 0);
-const EMPTY = { name: '', dni: '', phone: '', email: '', notes: '' };
+const EMPTY = { name: '', dni: '', phone: '', email: '', notes: '', photo: null };
+
+function PhotoUploader({ value, onChange }) {
+  const ref = useRef();
+  const handleFile = (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    if (file.size > 3 * 1024 * 1024) { alert('Máximo 3MB'); return; }
+    const reader = new FileReader();
+    reader.onload = (ev) => onChange(ev.target.result);
+    reader.readAsDataURL(file);
+  };
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
+      <label className="form-label">Foto del comprador (opcional)</label>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div onClick={() => ref.current.click()}
+          style={{ width: 72, height: 72, borderRadius: '50%', border: '2px dashed var(--border2)', background: 'var(--bg3)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', overflow: 'hidden', flexShrink: 0 }}
+          onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--primary)'}
+          onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border2)'}>
+          {value
+            ? <img src={value} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+            : <Camera size={22} color="var(--text3)" style={{ opacity: 0.4 }} />
+          }
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <button type="button" className="btn btn-sm btn-secondary" onClick={() => ref.current.click()}>
+            <Camera size={12} /> Subir foto
+          </button>
+          {value && (
+            <button type="button" className="btn btn-sm btn-danger" onClick={() => onChange(null)}>
+              <ImageOff size={12} /> Quitar
+            </button>
+          )}
+        </div>
+      </div>
+      <input ref={ref} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFile} />
+    </div>
+  );
+}
 
 function Modal({ buyer, onClose, onSave, saving }) {
   const [form, setForm] = useState(buyer || EMPTY);
@@ -16,6 +55,7 @@ function Modal({ buyer, onClose, onSave, saving }) {
           <button className="btn btn-sm btn-secondary" onClick={onClose}><X size={14} /></button>
         </div>
         <div className="modal-body">
+          <PhotoUploader value={form.photo} onChange={v => set('photo', v)} />
           <div className="form-group">
             <label className="form-label">Nombre completo</label>
             <input className="form-input" placeholder="Juan Pérez" value={form.name} onChange={e => set('name', e.target.value)} autoFocus />
@@ -57,6 +97,7 @@ export default function Buyers() {
   const [search, setSearch] = useState('');
   const [modal, setModal] = useState(null);
   const [saving, setSaving] = useState(false);
+  const toast = useToast();
 
   useEffect(() => {
     const u1 = buyersApi.subscribe(setBuyers);
@@ -76,17 +117,20 @@ export default function Buyers() {
       if (modal === 'new') await buyersApi.add(form);
       else await buyersApi.update(modal.id, form);
       setModal(null);
-    } catch (e) { alert(e.message); } finally { setSaving(false); }
+      toast(modal === 'new' ? 'Comprador creado' : 'Cambios guardados', 'success');
+    } catch (e) { toast(e.message, 'error'); } finally { setSaving(false); }
   };
 
   const handleDelete = async (id) => {
     if (!confirm('¿Eliminar este comprador?')) return;
-    try { await buyersApi.remove(id); } catch (e) { alert(e.message); }
+    try {
+      await buyersApi.remove(id);
+      toast('Comprador eliminado', 'warning');
+    } catch (e) { toast(e.message, 'error'); }
   };
 
   const getBuyerSales = (buyerId) => sales.filter(s => s.buyerId === buyerId);
   const getPhone = (id) => phones.find(p => p.id === id);
-
   const initials = (name) => name?.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase() || '?';
 
   return (
@@ -119,7 +163,7 @@ export default function Buyers() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((b, i) => {
+                  {filtered.map(b => {
                     const buySales = getBuyerSales(b.id);
                     const totalGastado = buySales.reduce((a, s) => a + Number(s.salePrice || 0), 0);
                     const lastPhone = buySales.length > 0 ? getPhone(buySales[0].phoneId) : null;
@@ -127,10 +171,13 @@ export default function Buyers() {
                       <tr key={b.id}>
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'var(--bg3)', border: '1.5px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'var(--text)', flexShrink: 0 }}>
-                              {initials(b.name)}
+                            <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'var(--bg3)', border: '2px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: 'var(--primary)', flexShrink: 0, overflow: 'hidden' }}>
+                              {b.photo
+                                ? <img src={b.photo} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+                                : initials(b.name)
+                              }
                             </div>
-                            <span style={{ fontWeight: 500 }}>{b.name}</span>
+                            <span style={{ fontWeight: 600 }}>{b.name}</span>
                           </div>
                         </td>
                         <td style={{ color: 'var(--text2)' }}>{b.dni || '—'}</td>
@@ -141,10 +188,12 @@ export default function Buyers() {
                           </div>
                         </td>
                         <td>
-                          <span style={{ fontFamily: 'Bebas Neue', fontSize: 16 }}>{buySales.length}</span>
+                          <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--primary)' }}>{buySales.length}</span>
                           {lastPhone && <div style={{ fontSize: 11, color: 'var(--text3)' }}>{lastPhone.model}</div>}
                         </td>
-                        <td style={{ fontFamily: 'Bebas Neue', fontSize: 15 }}>{buySales.length > 0 ? fmt(totalGastado) : '—'}</td>
+                        <td style={{ fontWeight: 700, color: buySales.length > 0 ? 'var(--primary)' : 'var(--text3)' }}>
+                          {buySales.length > 0 ? fmt(totalGastado) : '—'}
+                        </td>
                         <td>
                           <div style={{ display: 'flex', gap: 6 }}>
                             <button className="btn btn-sm btn-secondary" onClick={() => setModal(b)}><Edit2 size={12} /></button>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { expensesApi } from '../api';
 import { Plus, Search, DollarSign, Edit2, Trash2, X } from 'lucide-react';
+import { useToast } from '../context/ToastContext';
 
 const fmt = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(n || 0);
 const CATEGORIES = ['Compra de equipo', 'Envío / Flete', 'Reparación', 'Comisión', 'Publicidad', 'Caja / Accesorios', 'Impuestos', 'Otros'];
@@ -69,6 +70,7 @@ export default function Expenses() {
   const [filterCat, setFilterCat] = useState('todas');
   const [modal, setModal] = useState(null);
   const [saving, setSaving] = useState(false);
+  const toast = useToast();
 
   useEffect(() => expensesApi.subscribe(setExpenses), []);
 
@@ -84,12 +86,16 @@ export default function Expenses() {
       if (modal === 'new') await expensesApi.add(form);
       else await expensesApi.update(modal.id, form);
       setModal(null);
-    } catch (e) { alert(e.message); } finally { setSaving(false); }
+      toast(modal === 'new' ? 'Gasto registrado' : 'Gasto actualizado', 'success');
+    } catch (e) { toast(e.message, 'error'); } finally { setSaving(false); }
   };
 
   const handleDelete = async (id) => {
     if (!confirm('¿Eliminar este gasto?')) return;
-    try { await expensesApi.remove(id); } catch (e) { alert(e.message); }
+    try {
+      await expensesApi.remove(id);
+      toast('Gasto eliminado', 'warning');
+    } catch (e) { toast(e.message, 'error'); }
   };
 
   const byCat = CATEGORIES.map(cat => ({
@@ -99,6 +105,7 @@ export default function Expenses() {
   })).filter(c => c.count > 0).sort((a, b) => b.total - a.total);
 
   const totalGeneral = expenses.reduce((a, e) => a + Number(e.amount || 0), 0);
+  const maxCat = byCat[0]?.total || 1;
 
   return (
     <>
@@ -107,7 +114,7 @@ export default function Expenses() {
         <button className="btn btn-primary" onClick={() => setModal('new')}><Plus size={15} /> Nuevo gasto</button>
       </div>
       <div className="page-body fade-up">
-        <div className="expenses-layout" style={{ display: 'grid', gridTemplateColumns: '1fr 260px', gap: 20 }}>
+        <div className="expenses-layout" style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: 20 }}>
           <div>
             <div className="toolbar">
               <div className="search-box">
@@ -135,8 +142,10 @@ export default function Expenses() {
                             <span style={{ fontSize: 16, marginRight: 6 }}>{CAT_ICONS[e.category] || '📌'}</span>
                             <span style={{ fontSize: 11, color: 'var(--text2)' }}>{e.category}</span>
                           </td>
-                          <td style={{ fontWeight: 500 }}>{e.description}</td>
-                          <td style={{ fontFamily: 'Bebas Neue', fontSize: 15 }}>{fmt(e.amount)} <span style={{ fontSize: 10, fontFamily: 'DM Sans', color: 'var(--text3)' }}>{e.currency}</span></td>
+                          <td style={{ fontWeight: 600 }}>{e.description}</td>
+                          <td style={{ fontWeight: 700, color: 'var(--primary)' }}>
+                            {fmt(e.amount)} <span style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 400 }}>{e.currency}</span>
+                          </td>
                           <td style={{ fontSize: 12, color: 'var(--text2)' }}>{e.date}</td>
                           <td>
                             <div style={{ display: 'flex', gap: 6 }}>
@@ -152,28 +161,35 @@ export default function Expenses() {
               )
             }
             <div style={{ textAlign: 'right', marginTop: 12, fontSize: 13, color: 'var(--text2)' }}>
-              Total: <strong style={{ fontFamily: 'Bebas Neue', fontSize: 16 }}>{fmt(filtered.reduce((a, e) => a + Number(e.amount || 0), 0))}</strong>
+              Total filtrado: <strong style={{ color: 'var(--primary)', fontSize: 16 }}>{fmt(filtered.reduce((a, e) => a + Number(e.amount || 0), 0))}</strong>
             </div>
           </div>
 
           <div className="card">
-            <h3 style={{ fontFamily: 'Bebas Neue', fontSize: 18, letterSpacing: 1, marginBottom: 16 }}>Por categoría</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {byCat.map(c => (
-                <div key={c.cat} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', background: 'var(--bg3)', borderRadius: 8 }}>
-                  <div>
-                    <span style={{ marginRight: 6 }}>{CAT_ICONS[c.cat]}</span>
-                    <span style={{ fontSize: 12 }}>{c.cat}</span>
-                    <span style={{ fontSize: 10, color: 'var(--text3)', marginLeft: 5 }}>({c.count})</span>
+            <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 16 }}>Por categoría</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {byCat.map(c => {
+                const pct = Math.round((c.total / maxCat) * 100);
+                return (
+                  <div key={c.cat}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+                      <span style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 5 }}>
+                        {CAT_ICONS[c.cat]} {c.cat}
+                        <span style={{ fontSize: 10, color: 'var(--text3)' }}>({c.count})</span>
+                      </span>
+                      <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--primary)' }}>{fmt(c.total)}</span>
+                    </div>
+                    <div className="progress-wrap">
+                      <div className="progress-bar progress-bar--default" style={{ width: `${Math.max(pct, 4)}%` }} />
+                    </div>
                   </div>
-                  <span style={{ fontFamily: 'Bebas Neue', fontSize: 14 }}>{fmt(c.total)}</span>
-                </div>
-              ))}
+                );
+              })}
               {byCat.length === 0 && <p style={{ color: 'var(--text3)', fontSize: 13 }}>Sin gastos aún</p>}
               {byCat.length > 0 && (
-                <div style={{ padding: '10px', borderTop: '1.5px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+                <div style={{ paddingTop: 12, borderTop: '2px solid var(--primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text2)' }}>TOTAL</span>
-                  <span style={{ fontFamily: 'Bebas Neue', fontSize: 16 }}>{fmt(totalGeneral)}</span>
+                  <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--primary)' }}>{fmt(totalGeneral)}</span>
                 </div>
               )}
             </div>

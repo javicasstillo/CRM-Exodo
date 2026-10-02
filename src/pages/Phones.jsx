@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { phonesApi } from '../api';
 import { Plus, Search, Smartphone, Edit2, Trash2, X, Camera, ImageOff, Minus } from 'lucide-react';
+import { useToast } from '../context/ToastContext';
 
 const fmt = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(n || 0);
 
@@ -25,30 +26,21 @@ const CATEGORIES = {
     'AirPods Pro', 'AirPods Pro 2',
     'AirPods Max',
   ],
-    'Parlante': [
+  'Parlante': [
     'JBL Go 4', 'JBL Go 4 Pro',
     'JBL Flip 6', 'JBL Charge 5', 'JBL Xtreme 3',
   ],
   'Cargador': [
-    'Cargador Apple 20W Original',
-    'Cargador Apple 20W Replica',
-    'Cargador Apple 35W Original',
-    'Cargador Apple 35W Replica',
-    'Cargador Apple 67W Original',
-    'Cargador Apple 67W Replica',
-    'Cargador MagSafe Original',
-    'Cargador MagSafe Replica',
-    'Cable USB-C a Lightning Original',
-    'Cable USB-C a Lightning Replica',
-    'Cable USB-C a USB-C Original',
-    'Cable USB-C a USB-C Replica',
+    'Cargador Apple 20W Original', 'Cargador Apple 20W Replica',
+    'Cargador Apple 35W Original', 'Cargador Apple 35W Replica',
+    'Cargador Apple 67W Original', 'Cargador Apple 67W Replica',
+    'Cargador MagSafe Original', 'Cargador MagSafe Replica',
+    'Cable USB-C a Lightning Original', 'Cable USB-C a Lightning Replica',
+    'Cable USB-C a USB-C Original', 'Cable USB-C a USB-C Replica',
   ],
   'Battery Pack': [
-    'Battery Pack MagSafe Original',
-    'Battery Pack MagSafe Replica',
-    'Battery Pack USB-C 5000mAh',
-    'Battery Pack USB-C 10000mAh',
-    'Battery Pack USB-C 20000mAh',
+    'Battery Pack MagSafe Original', 'Battery Pack MagSafe Replica',
+    'Battery Pack USB-C 5000mAh', 'Battery Pack USB-C 10000mAh', 'Battery Pack USB-C 20000mAh',
   ],
   'Otro': ['Otro'],
 };
@@ -65,7 +57,6 @@ const getCategory = (model) => {
   return 'Otro';
 };
 
-// iPhones siempre cantidad 1 (son únicos por IMEI), accesorios pueden tener más
 const needsQuantity = (category) => category !== 'iPhone';
 
 const EMPTY = {
@@ -88,7 +79,7 @@ function PhotoUploader({ value, onChange }) {
       <label className="form-label">Foto del producto</label>
       <div onClick={() => ref.current.click()}
         style={{ height: 160, borderRadius: 10, border: '2px dashed var(--border2)', background: 'var(--bg3)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', overflow: 'hidden', position: 'relative' }}
-        onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--text)'}
+        onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--primary)'}
         onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border2)'}>
         {value
           ? <img src={value} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
@@ -113,19 +104,14 @@ function QuantitySelector({ value, onChange }) {
   const qty = Number(value) || 1;
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 0, border: '1.5px solid var(--border2)', borderRadius: 8, overflow: 'hidden', width: 'fit-content' }}>
-      <button type="button"
-        onClick={() => onChange(Math.max(1, qty - 1))}
+      <button type="button" onClick={() => onChange(Math.max(1, qty - 1))}
         style={{ padding: '8px 12px', background: 'var(--bg3)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
         <Minus size={14} />
       </button>
-      <input
-        type="number" min="1" max="999"
-        value={qty}
+      <input type="number" min="1" max="999" value={qty}
         onChange={e => onChange(Math.max(1, Number(e.target.value) || 1))}
-        style={{ width: 52, textAlign: 'center', border: 'none', outline: 'none', fontFamily: 'Bebas Neue', fontSize: 18, background: 'var(--bg)', color: 'var(--text)', padding: '6px 0' }}
-      />
-      <button type="button"
-        onClick={() => onChange(qty + 1)}
+        style={{ width: 52, textAlign: 'center', border: 'none', outline: 'none', fontSize: 18, fontWeight: 700, background: 'var(--bg-card)', color: 'var(--text)', padding: '6px 0' }} />
+      <button type="button" onClick={() => onChange(qty + 1)}
         style={{ padding: '8px 12px', background: 'var(--bg3)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
         <Plus size={14} />
       </button>
@@ -143,9 +129,9 @@ function Modal({ phone, onClose, onSave, saving }) {
   };
 
   const isWatch = form.category === 'Apple Watch';
-  const needsStorage = form.category === 'iPhone' || form.category === 'Apple Watch' || form.category === 'AirPods';
-  const needsBattery = form.category === 'iPhone' || form.category === 'Apple Watch';
-  const needsImei = form.category === 'iPhone' || form.category === 'Apple Watch';
+  const needsStorage = ['iPhone', 'Apple Watch', 'AirPods'].includes(form.category);
+  const needsBattery = ['iPhone', 'Apple Watch'].includes(form.category);
+  const needsImei = ['iPhone', 'Apple Watch'].includes(form.category);
   const showQuantity = needsQuantity(form.category);
 
   const margen = form.salePrice && form.costPrice
@@ -193,7 +179,6 @@ function Modal({ phone, onClose, onSave, saving }) {
             </div>
           </div>
 
-          {/* Cantidad — solo para accesorios */}
           {showQuantity && (
             <div style={{ background: 'var(--bg3)', borderRadius: 10, padding: '14px 16px', marginBottom: 14 }}>
               <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 12 }}>Cantidad en stock</div>
@@ -230,18 +215,16 @@ function Modal({ phone, onClose, onSave, saving }) {
           </div>
 
           <div className="form-grid form-grid-2">
-            {needsImei && (
-              <div className="form-group">
-                <label className="form-label">{isWatch ? 'Serial / IMEI' : 'IMEI'}</label>
-                <input className="form-input" placeholder="352xxx..." value={form.imei || ''} onChange={e => set('imei', e.target.value)} />
-              </div>
-            )}
-            {!needsImei && (
-              <div className="form-group">
-                <label className="form-label">Serial / Código</label>
-                <input className="form-input" placeholder="Serial..." value={form.serial || ''} onChange={e => set('serial', e.target.value)} />
-              </div>
-            )}
+            {needsImei
+              ? <div className="form-group">
+                  <label className="form-label">{isWatch ? 'Serial / IMEI' : 'IMEI'}</label>
+                  <input className="form-input" placeholder="352xxx..." value={form.imei || ''} onChange={e => set('imei', e.target.value)} />
+                </div>
+              : <div className="form-group">
+                  <label className="form-label">Serial / Código</label>
+                  <input className="form-input" placeholder="Serial..." value={form.serial || ''} onChange={e => set('serial', e.target.value)} />
+                </div>
+            }
             {needsBattery && (
               <div className="form-group">
                 <label className="form-label">Batería (%)</label>
@@ -273,7 +256,7 @@ function Modal({ phone, onClose, onSave, saving }) {
               <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text2)' }}>
                 Ganancia estimada: <strong>{fmt(Number(form.salePrice) - Number(form.costPrice))}</strong> · Margen: <strong>{margen}%</strong>
                 {showQuantity && form.quantity > 1 && (
-                  <span> · Stock total: <strong>{fmt(Number(form.costPrice) * Number(form.quantity))}</strong> invertido</span>
+                  <span> · Invertido: <strong>{fmt(Number(form.costPrice) * Number(form.quantity))}</strong></span>
                 )}
               </div>
             )}
@@ -302,6 +285,7 @@ export default function Phones() {
   const [filterCat, setFilterCat] = useState('todas');
   const [modal, setModal] = useState(null);
   const [saving, setSaving] = useState(false);
+  const toast = useToast();
 
   useEffect(() => phonesApi.subscribe(setPhones), []);
 
@@ -319,29 +303,37 @@ export default function Phones() {
       if (modal === 'new') await phonesApi.add(form);
       else await phonesApi.update(modal.id, form);
       setModal(null);
-    } catch (e) { alert(e.message); } finally { setSaving(false); }
+      toast(modal === 'new' ? 'Producto agregado correctamente' : 'Cambios guardados', 'success');
+    } catch (e) { toast(e.message, 'error'); } finally { setSaving(false); }
   };
 
   const handleDelete = async (id) => {
     if (!confirm('¿Eliminar este producto?')) return;
-    try { await phonesApi.remove(id); } catch (e) { alert(e.message); }
+    try {
+      await phonesApi.remove(id);
+      toast('Producto eliminado', 'warning');
+    } catch (e) { toast(e.message, 'error'); }
   };
 
-  // Reducir cantidad en 1 rápido desde la card
   const handleReduceQty = async (p) => {
     const qty = Number(p.quantity) || 1;
     if (qty <= 1) {
       if (!confirm('Solo queda 1 unidad. ¿Querés marcarlo como vendido?')) return;
       await phonesApi.update(p.id, { status: 'vendido', quantity: 0 });
+      toast('Producto marcado como vendido', 'info');
     } else {
       await phonesApi.update(p.id, { quantity: qty - 1 });
+      toast(`Stock actualizado: ${qty - 1} unidades`, 'info');
     }
   };
 
-  const badgeStatus = (s) => s === 'disponible' ? 'badge-black' : 'badge-gray';
+  const badgeStatus = (s) => {
+    if (s === 'disponible') return 'badge-green';
+    if (s === 'reservado') return 'badge-yellow';
+    if (s === 'vendido') return 'badge-gray';
+    return 'badge-gray';
+  };
   const labelStatus = { disponible: 'Disponible', vendido: 'Vendido', reservado: 'Reservado', reparacion: 'Reparación' };
-
-  // Total de unidades disponibles contando quantity
   const totalUnidades = phones.filter(p => p.status === 'disponible').reduce((a, p) => a + (Number(p.quantity) || 1), 0);
 
   return (
@@ -356,9 +348,7 @@ export default function Phones() {
       <div className="page-body fade-up">
 
         <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-          <button className={`btn btn-sm ${filterCat === 'todas' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setFilterCat('todas')}>
-            Todas
-          </button>
+          <button className={`btn btn-sm ${filterCat === 'todas' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setFilterCat('todas')}>Todas</button>
           {Object.keys(CATEGORIES).filter(c => c !== 'Otro').map(cat => (
             <button key={cat} className={`btn btn-sm ${filterCat === cat ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setFilterCat(cat)}>
               {CAT_ICON[cat]} {cat}
@@ -386,8 +376,9 @@ export default function Phones() {
                 const cat = p.category || getCategory(p.model);
                 const qty = Number(p.quantity) || 1;
                 const showQty = needsQuantity(cat);
+                const isLowStock = showQty && p.status === 'disponible' && qty < 3;
                 return (
-                  <div key={p.id} className="phone-card">
+                  <div key={p.id} className="phone-card" style={{ border: isLowStock ? '1.5px solid #fca5a5' : undefined }}>
                     <div className="phone-card-img" style={{ position: 'relative', overflow: 'hidden' }}>
                       {p.photo
                         ? <img src={p.photo} alt={p.model} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -397,12 +388,11 @@ export default function Phones() {
                         <span className={`badge ${badgeStatus(p.status)}`}>{labelStatus[p.status] || p.status}</span>
                       </div>
                       <div style={{ position: 'absolute', top: 8, left: 8 }}>
-                        <span className="badge badge-gray">{CAT_ICON[cat]} {cat}</span>
+                        <span className="badge badge-blue">{CAT_ICON[cat]} {cat}</span>
                       </div>
-                      {/* Badge de cantidad para accesorios */}
                       {showQty && p.status === 'disponible' && (
-                        <div style={{ position: 'absolute', bottom: 8, right: 8, background: qty <= 2 ? 'rgba(0,0,0,0.85)' : 'rgba(0,0,0,0.7)', color: '#fff', fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 20, fontFamily: 'Bebas Neue', letterSpacing: 1 }}>
-                          x{qty}
+                        <div style={{ position: 'absolute', bottom: 8, right: 8, background: isLowStock ? 'rgba(239,68,68,0.9)' : 'rgba(0,0,0,0.7)', color: '#fff', fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 20 }}>
+                          x{qty} {isLowStock ? '⚠️' : ''}
                         </div>
                       )}
                       {p.batteryHealth && (
@@ -412,6 +402,11 @@ export default function Phones() {
                       )}
                     </div>
                     <div className="phone-card-body">
+                      {isLowStock && (
+                        <div style={{ fontSize: 10, color: '#dc2626', fontWeight: 700, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                          ⚠️ Stock bajo — quedan {qty} unidades
+                        </div>
+                      )}
                       <div className="phone-card-model">{p.model}</div>
                       <div className="phone-card-sub">{p.condition}{p.storage && p.storage !== 'N/A' ? ` · ${p.storage}` : ''}</div>
                       <div className="chip-row">
@@ -425,19 +420,16 @@ export default function Phones() {
                         </div>
                       )}
 
-                      {/* Selector rápido de cantidad en la card */}
                       {showQty && p.status === 'disponible' && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
                           <span style={{ fontSize: 11, color: 'var(--text3)', flex: 1 }}>Stock:</span>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 0, border: '1px solid var(--border2)', borderRadius: 6, overflow: 'hidden' }}>
-                            <button type="button"
-                              onClick={() => handleReduceQty(p)}
+                            <button type="button" onClick={() => handleReduceQty(p)}
                               style={{ padding: '3px 8px', background: 'var(--bg3)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
                               <Minus size={11} />
                             </button>
-                            <span style={{ padding: '3px 10px', fontFamily: 'Bebas Neue', fontSize: 15, background: 'var(--bg)', minWidth: 30, textAlign: 'center' }}>{qty}</span>
-                            <button type="button"
-                              onClick={() => phonesApi.update(p.id, { quantity: qty + 1 })}
+                            <span style={{ padding: '3px 10px', fontSize: 15, fontWeight: 700, background: 'var(--bg-card)', minWidth: 30, textAlign: 'center' }}>{qty}</span>
+                            <button type="button" onClick={() => phonesApi.update(p.id, { quantity: qty + 1 })}
                               style={{ padding: '3px 8px', background: 'var(--bg3)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
                               <Plus size={11} />
                             </button>
@@ -446,7 +438,7 @@ export default function Phones() {
                       )}
 
                       <div className="phone-card-footer">
-                        <div className="phone-price">{fmt(p.salePrice)}<span style={{ fontSize: 10, fontFamily: 'DM Sans', color: 'var(--text3)' }}> {p.currency}</span></div>
+                        <div className="phone-price">{fmt(p.salePrice)}<span style={{ fontSize: 10, fontFamily: 'Inter', color: 'var(--text3)' }}> {p.currency}</span></div>
                         <div style={{ display: 'flex', gap: 6 }}>
                           <button className="btn btn-sm btn-secondary" onClick={() => setModal(p)}><Edit2 size={12} /></button>
                           <button className="btn btn-sm btn-danger" onClick={() => handleDelete(p.id)}><Trash2 size={12} /></button>
