@@ -15,13 +15,15 @@ export default function SubscriptionGate({ children }) {
   const [paymentLink, setPaymentLink] = useState(null);
   const [loadingLink, setLoadingLink] = useState(false);
 
-  const fetchPaymentLink = async () => {
+     const fetchPaymentLink = async (autoOpen = false) => {
     setLoadingLink(true);
     try {
       const functions = getFunctions(undefined, 'us-central1');
       const getPaymentLink = httpsCallable(functions, 'getPaymentLink');
       const result = await getPaymentLink();
-      setPaymentLink(result.data.initPoint);
+      const link = result.data.initPoint;
+      setPaymentLink(link);
+      if (autoOpen && link) window.open(link, '_blank');
     } catch (e) {
       console.error('Error obteniendo link de pago:', e);
     } finally {
@@ -56,8 +58,8 @@ export default function SubscriptionGate({ children }) {
                 }
               </span>
             </div>
-            <button
-              onClick={fetchPaymentLink}
+                        <button
+              onClick={() => paymentLink ? window.open(paymentLink, '_blank') : fetchPaymentLink(true)}
               disabled={loadingLink}
               style={{
                 background: '#0d6efd', color: '#fff',
