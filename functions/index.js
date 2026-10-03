@@ -108,21 +108,23 @@ exports.createSubscription = onCall(async (request) => {
   const preApproval = new PreApproval(mp);
   const planId = await getOrCreatePlan(planKey);
 
-  const sub = await preApproval.create({
-    body: {
-      preapproval_plan_id: planId,
-      reason: PLANS[planKey].name,
-      payer_email: user.email,
-      back_url: "https://app.genesys.com.ar",
-      auto_recurring: {
-        frequency: 1,
-        frequency_type: "months",
-        transaction_amount: PLANS[planKey].amount,
-        currency_id: "ARS",
-      },
-      status: "pending",
-    },
-  });
+  const mp2 = new MercadoPagoConfig({ accessToken: MP_ACCESS_TOKEN });
+const planApi2 = new PreApprovalPlan(mp2);
+const planData = await planApi2.get({ id: planId });
+
+// El init_point del plan lleva al checkout de MP donde el cliente ingresa su tarjeta
+const initPoint = planData.init_point || `https://www.mercadopago.com.ar/subscriptions/checkout?preapproval_plan_id=${planId}`;
+
+await db.collection("businesses").doc(user.businessId).update({
+  mpPlanKey: planKey,
+  status: "pending_payment",
+});
+
+return {
+  initPoint,
+  plan: planKey,
+  amount: PLANS[planKey].amount,
+};
 
   await db.collection("businesses").doc(user.businessId).update({
     mpSubscriptionId: sub.id,
@@ -246,55 +248,27 @@ exports.getPaymentLink = onCall(async (request) => {
 
   const biz = bizDoc.data();
 
-  // Si ya tiene suscripción pendiente, devolver el mismo link
-  if (biz.mpSubscriptionId && biz.status === "pending_payment") {
-    const mp = new MercadoPagoConfig({ accessToken: MP_ACCESS_TOKEN });
-    const preApproval = new PreApproval(mp);
-    try {
-      const sub = await preApproval.get({ id: biz.mpSubscriptionId });
-      if (sub.init_point) {
-        return { initPoint: sub.init_point, plan: biz.plan };
-      }
-    } catch (e) {
-      // Si falla, crear una nueva
-    }
-  }
+    const planKey = biz.plan || "emprendedor";
 
-  const planKey = biz.plan || "emprendedor";
   const mp = new MercadoPagoConfig({ accessToken: MP_ACCESS_TOKEN });
-  const preApproval = new PreApproval(mp);
   const planId = await getOrCreatePlan(planKey);
-
-  const sub = await preApproval.create({
-    body: {
-      preapproval_plan_id: planId,
-      reason: PLANS[planKey].name,
-      payer_email: user.email,
-      back_url: "https://app.genesys.com.ar",
-      auto_recurring: {
-        frequency: 1,
-        frequency_type: "months",
-        transaction_amount: PLANS[planKey].amount,
-        currency_id: "ARS",
-      },
-      status: "pending",
-    },
-  });
+const initPoint = `https://www.mercadopago.com.ar/subscriptions/checkout?preapproval_plan_id=${planId}`;
 
   await db.collection("businesses").doc(user.businessId).update({
-    mpSubscriptionId: sub.id,
     mpPlanKey: planKey,
     status: "pending_payment",
   });
 
   return {
-    initPoint: sub.init_point,
+    initPoint,
     plan: planKey,
     amount: PLANS[planKey].amount,
   };
+});
+
+ 
 
   
-});
 
 // ── 8. Cancelar suscripción ────────────────────────────────────────────
 exports.cancelSubscription = onCall(async (request) => {

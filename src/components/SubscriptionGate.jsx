@@ -23,7 +23,7 @@ export default function SubscriptionGate({ children }) {
       const result = await getPaymentLink();
       const link = result.data.initPoint;
       setPaymentLink(link);
-      if (autoOpen && link) window.open(link, '_blank');
+      if (autoOpen && link) window.location.href = link;
     } catch (e) {
       console.error('Error obteniendo link de pago:', e);
     } finally {
@@ -72,7 +72,7 @@ export default function SubscriptionGate({ children }) {
               {loadingLink ? 'Cargando...' : 'Activar suscripción'}
             </button>
             {paymentLink && (
-              <a href={paymentLink} target="_blank" rel="noopener noreferrer"
+              <a href={paymentLink}
                 style={{ display: 'none' }} id="mp-payment-link" />
             )}
           </div>
