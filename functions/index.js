@@ -42,11 +42,19 @@ async function getOrCreatePlan(planKey) {
 }
 
 // ── 1. Registrar nuevo negocio ───────────────────────────────────────────
-exports.registerBusiness = onCall(async (request) => {
-  const { email, password, businessName, plan = "emprendedor" } = request.data;
+exports.registerBusiness = onRequest(async (req, res) => {
+  // Habilitar CORS
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.set('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') { res.status(204).send(''); return; }
+  if (req.method !== 'POST') { res.status(405).send('Method not allowed'); return; }
+
+  const { email, password, businessName, plan = 'emprendedor' } = req.body;
 
   if (!email || !password || !businessName) {
-    throw new HttpsError("invalid-argument", "Faltan datos requeridos");
+    res.status(400).json({ error: 'Faltan datos requeridos' }); return;
   }
 
   try {
@@ -56,29 +64,21 @@ exports.registerBusiness = onCall(async (request) => {
     const trialEnd = new Date();
     trialEnd.setDate(trialEnd.getDate() + 14);
 
-    await db.collection("users").doc(uid).set({
-      name: businessName,
-      email,
-      role: "admin",
-      businessId: uid,
-      active: true,
+    await db.collection('users').doc(uid).set({
+      name: businessName, email, role: 'admin',
+      businessId: uid, active: true,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    await db.collection("businesses").doc(uid).set({
-      name: businessName,
-      plan,
-      status: "trial",
-      trialEnd,
-      currency: "ARS",
-      lowStockThreshold: 3,
-      defaultWarrantyDays: 30,
+    await db.collection('businesses').doc(uid).set({
+      name: businessName, plan, status: 'trial', trialEnd,
+      currency: 'ARS', lowStockThreshold: 3, defaultWarrantyDays: 30,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    return { success: true, uid, businessId: uid };
+    res.status(200).json({ success: true, uid });
   } catch (e) {
-    throw new HttpsError("internal", e.message);
+    res.status(500).json({ error: e.message });
   }
 });
 
