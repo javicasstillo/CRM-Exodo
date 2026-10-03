@@ -4,52 +4,76 @@ import { Plus, Search, ShoppingCart, Edit2, Trash2, X, Download, CheckCircle } f
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { SourceLabel, SourceIcon } from '../components/SourceIcon';
+import { useApp } from '../context/AppContext';
 
 const fmt = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(n || 0);
 const PAYMENT_METHODS = ['Efectivo', 'Transferencia', 'Cuotas con tarjeta', 'Cuotas sin tarjeta', 'Cripto', 'Mixto'];
 const SOURCES = ['Instagram', 'Facebook', 'TikTok', 'Recomendación', 'WhatsApp', 'Mercado Libre', 'Otro'];
 const EMPTY = { phoneId: '', buyerId: '', salePrice: '', costPrice: '', currency: 'ARS', saleDate: new Date().toISOString().split('T')[0], paymentMethod: 'Efectivo', installments: '', notes: '', status: 'completada', warrantyDays: '30', source: 'Instagram' };
 
-async function exportRecibo(sale, phone, buyer) {
+async function exportRecibo(sale, phone, buyer, business) {
+  const negocioNombre = business?.name || 'Mi Negocio';
+  const negocioTel = business?.phone || '';
+  const negocioDireccion = business?.address || '';
+  const negocioWA = business?.whatsapp || '';
+
   const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:Arial,sans-serif;font-size:13px;color:#000;padding:40px;width:700px}
-    .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px;padding-bottom:20px;border-bottom:2px solid #000}
-    .logo{font-size:32px;font-weight:900;letter-spacing:4px}
-    .logo span{font-size:12px;display:block;font-weight:400;letter-spacing:1px;color:#555;margin-top:2px}
-    .rec-num{text-align:right;font-size:12px;color:#555}
-    .rec-num strong{display:block;font-size:14px;color:#000;margin-bottom:2px}
-    .monto-box{background:#f5f5f5;border:2px solid #000;border-radius:10px;padding:20px 28px;margin:24px 0;display:flex;justify-content:space-between;align-items:center}
-    .monto-box .label{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#555}
-    .monto-box .valor{font-size:34px;font-weight:900;color:#000;letter-spacing:1px}
+    body{font-family:Arial,sans-serif;font-size:13px;color:#111;padding:40px;width:700px}
+    .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;padding-bottom:20px;border-bottom:3px solid #0d6efd}
+    .logo-name{font-size:28px;font-weight:900;letter-spacing:2px;color:#0d6efd}
+    .logo-sub{font-size:11px;font-weight:400;color:#666;margin-top:3px;letter-spacing:0.5px}
+    .logo-contact{font-size:11px;color:#888;margin-top:6px;line-height:1.6}
+    .rec-info{text-align:right;font-size:12px;color:#666}
+    .rec-info strong{display:block;font-size:15px;color:#111;font-weight:800;margin-bottom:4px;letter-spacing:1px}
+    .monto-box{background:linear-gradient(135deg,#0d6efd,#1a56db);border-radius:12px;padding:20px 28px;margin:24px 0;display:flex;justify-content:space-between;align-items:center;color:#fff}
+    .monto-box .label{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;opacity:0.8}
+    .monto-box .valor{font-size:34px;font-weight:900;letter-spacing:1px}
     .section{margin-bottom:22px}
-    .section-title{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#555;border-bottom:1px solid #ddd;padding-bottom:6px;margin-bottom:12px}
+    .section-title{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#0d6efd;border-bottom:1px solid #e0e8ff;padding-bottom:6px;margin-bottom:12px}
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 30px}
     .item label{font-size:10px;font-weight:600;text-transform:uppercase;color:#999;display:block;margin-bottom:2px}
-    .item span{font-size:13px}
-    .badge{display:inline-block;padding:3px 12px;border-radius:20px;font-size:11px;font-weight:700;background:#000;color:#fff}
-    .watermark{text-align:center;margin-top:30px;font-size:10px;color:#ccc;letter-spacing:2px;text-transform:uppercase}
+    .item span{font-size:13px;color:#111}
+    .badge{display:inline-block;padding:3px 12px;border-radius:20px;font-size:11px;font-weight:700;background:#0d6efd;color:#fff}
+    .watermark{text-align:center;margin-top:30px;padding-top:16px;border-top:1px solid #eee;font-size:10px;color:#bbb;letter-spacing:2px;text-transform:uppercase}
+    .watermark span{color:#0d6efd;font-weight:700}
   </style></head><body>
   <div class="header">
-    <div><div class="logo">ÉXODO<span>Gestión de iPhones</span></div></div>
-    <div class="rec-num"><strong>RECIBO DE VENTA</strong>Fecha: ${sale.saleDate}<br>Garantía: ${sale.warrantyDays || 30} días</div>
+    <div>
+      <div class="logo-name">${negocioNombre}</div>
+      <div class="logo-sub">Sistema de gestión Genesys</div>
+      <div class="logo-contact">
+        ${negocioDireccion ? `📍 ${negocioDireccion}<br>` : ''}
+        ${negocioTel ? `📞 ${negocioTel}<br>` : ''}
+        ${negocioWA ? `📱 WhatsApp: ${negocioWA}` : ''}
+      </div>
+    </div>
+    <div class="rec-info">
+      <strong>RECIBO DE VENTA</strong>
+      Fecha: ${sale.saleDate}<br>
+      Garantía: ${sale.warrantyDays || 30} días
+    </div>
   </div>
+
   <div class="monto-box">
     <div class="label">Total de la operación</div>
-    <div class="valor">${fmt(sale.salePrice)} <span style="font-size:16px;font-weight:400">${sale.currency}</span></div>
+    <div class="valor">${fmt(sale.salePrice)} <span style="font-size:16px;font-weight:400;opacity:0.8">${sale.currency}</span></div>
   </div>
+
   <div class="section">
-    <div class="section-title">Equipo vendido</div>
+    <div class="section-title">Producto vendido</div>
     <div class="grid">
       <div class="item"><label>Modelo</label><span>${phone?.model || '—'}</span></div>
-      <div class="item"><label>Almacenamiento</label><span>${phone?.storage || '—'}</span></div>
+      ${phone?.storage && phone.storage !== 'N/A' ? `<div class="item"><label>Almacenamiento</label><span>${phone.storage}</span></div>` : ''}
       <div class="item"><label>Color</label><span>${phone?.color || '—'}</span></div>
       <div class="item"><label>Condición</label><span>${phone?.condition || '—'}</span></div>
       ${phone?.imei ? `<div class="item"><label>IMEI</label><span>${phone.imei}</span></div>` : ''}
+      ${phone?.serial ? `<div class="item"><label>Serial</label><span>${phone.serial}</span></div>` : ''}
       ${phone?.batteryHealth ? `<div class="item"><label>Batería</label><span>${phone.batteryHealth}%</span></div>` : ''}
     </div>
   </div>
+
   <div class="section">
     <div class="section-title">Comprador</div>
     <div class="grid">
@@ -59,6 +83,7 @@ async function exportRecibo(sale, phone, buyer) {
       <div class="item"><label>Email</label><span>${buyer?.email || '—'}</span></div>
     </div>
   </div>
+
   <div class="section">
     <div class="section-title">Detalle del pago</div>
     <div class="grid">
@@ -67,8 +92,13 @@ async function exportRecibo(sale, phone, buyer) {
       <div class="item"><label>Estado</label><span class="badge">${sale.status}</span></div>
     </div>
   </div>
+
   ${sale.notes ? `<div class="section"><div class="section-title">Observaciones</div><p style="font-size:13px;color:#444;line-height:1.6">${sale.notes}</p></div>` : ''}
-  <div class="watermark">Generado el ${new Date().toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
+
+  <div class="watermark">
+    Recibo generado el ${new Date().toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })} · 
+    Powered by <span>Genesys</span>
+  </div>
   </body></html>`;
 
   const iframe = document.createElement('iframe');
@@ -81,10 +111,7 @@ async function exportRecibo(sale, phone, buyer) {
   await new Promise(r => setTimeout(r, 600));
 
   const canvas = await html2canvas(iframe.contentDocument.body, {
-    scale: 2,
-    useCORS: true,
-    backgroundColor: '#ffffff',
-    width: 780,
+    scale: 2, useCORS: true, backgroundColor: '#ffffff', width: 780,
   });
 
   document.body.removeChild(iframe);
@@ -93,16 +120,10 @@ async function exportRecibo(sale, phone, buyer) {
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
-  const imgRatio = canvas.height / canvas.width;
-  const imgHeight = pageWidth * imgRatio;
+  const imgHeight = pageWidth * (canvas.height / canvas.width);
 
-  if (imgHeight <= pageHeight) {
-    pdf.addImage(imgData, 'PNG', 0, 0, pageWidth, imgHeight);
-  } else {
-    pdf.addImage(imgData, 'PNG', 0, 0, pageWidth, pageHeight);
-  }
-
-  pdf.save(`recibo-${(phone?.model || 'equipo').replace(/\s+/g, '-')}-${sale.saleDate}.pdf`);
+  pdf.addImage(imgData, 'PNG', 0, 0, pageWidth, imgHeight <= pageHeight ? imgHeight : pageHeight);
+  pdf.save(`recibo-${(phone?.model || 'producto').replace(/\s+/g, '-')}-${sale.saleDate}.pdf`);
 }
 
 function Modal({ sale, phones, buyers, onClose, onSave, saving }) {
@@ -236,6 +257,7 @@ export default function Sales() {
   const [sales, setSales] = useState([]);
   const [phones, setPhones] = useState([]);
   const [buyers, setBuyers] = useState([]);
+  const { business } = useApp();
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('todos');
   const [modal, setModal] = useState(null);
@@ -362,7 +384,7 @@ export default function Sales() {
                         <td>
                           <div style={{ display: 'flex', gap: 6 }}>
                             <button className="btn btn-sm btn-secondary" title="Descargar recibo"
-                              onClick={() => exportRecibo(s, getPhone(s.phoneId), getBuyer(s.buyerId))}>
+                              onClick={() => exportRecibo(s, getPhone(s.phoneId), getBuyer(s.buyerId), business)}>
                               <Download size={12} />
                             </button>
                             <button className="btn btn-sm btn-secondary" onClick={() => setModal(s)}><Edit2 size={12} /></button>
