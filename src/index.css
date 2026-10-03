@@ -713,3 +713,25 @@ textarea.form-input { resize: vertical; }
     padding-top: 0;
   }
 }
+
+/* Hamburguesa más abajo para no tapar el header */
+.hamburger {
+  top: 18px !important;
+}
+
+/* Evitar scroll horizontal en mobile */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+.app-shell {
+  overflow-x: hidden;
+}
+
+/* Header mobile — dejar espacio para hamburguesa */
+@media (max-width: 768px) {
+  header {
+    padding-left: 56px !important;
+  }
+}
