@@ -1,15 +1,33 @@
 import { useState, useEffect } from 'react';
 import { salesApi, phonesApi, buyersApi } from '../api';
-import { Plus, Search, ShoppingCart, Edit2, Trash2, X, Download, CheckCircle } from 'lucide-react';
+import { Plus, Search, ShoppingCart, Edit2, Trash2, X, Download } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { SourceLabel, SourceIcon } from '../components/SourceIcon';
+import * as XLSX from 'xlsx';
+import { SourceLabel } from '../components/SourceIcon';
 import { useApp } from '../context/AppContext';
+import { useToast } from '../context/ToastContext';
 
 const fmt = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(n || 0);
 const PAYMENT_METHODS = ['Efectivo', 'Transferencia', 'Cuotas con tarjeta', 'Cuotas sin tarjeta', 'Cripto', 'Mixto'];
 const SOURCES = ['Instagram', 'Facebook', 'TikTok', 'Recomendación', 'WhatsApp', 'Mercado Libre', 'Otro'];
 const EMPTY = { phoneId: '', buyerId: '', salePrice: '', costPrice: '', currency: 'ARS', saleDate: new Date().toISOString().split('T')[0], paymentMethod: 'Efectivo', installments: '', notes: '', status: 'completada', warrantyDays: '30', source: 'Instagram' };
+const PAGE_SIZE = 15;
+
+const DATE_FILTERS = [
+  { id: 'todos',         label: 'Todas' },
+  { id: 'hoy',          label: 'Hoy' },
+  { id: 'semana',       label: 'Esta semana' },
+  { id: 'mes',          label: 'Este mes' },
+  { id: 'mes_anterior', label: 'Mes anterior' },
+];
+
+// Restricciones por plan
+const PLAN_LIMITS = {
+  emprendedor: { maxUsers: 1, canExportExcel: false },
+  pyme:        { maxUsers: 3, canExportExcel: true  },
+  empresa:     { maxUsers: 999, canExportExcel: true },
+};
 
 async function exportRecibo(sale, phone, buyer, business) {
   const negocioNombre = business?.name || 'Mi Negocio';
@@ -55,12 +73,10 @@ async function exportRecibo(sale, phone, buyer, business) {
       Garantía: ${sale.warrantyDays || 30} días
     </div>
   </div>
-
   <div class="monto-box">
     <div class="label">Total de la operación</div>
     <div class="valor">${fmt(sale.salePrice)} <span style="font-size:16px;font-weight:400;opacity:0.8">${sale.currency}</span></div>
   </div>
-
   <div class="section">
     <div class="section-title">Producto vendido</div>
     <div class="grid">
@@ -73,7 +89,6 @@ async function exportRecibo(sale, phone, buyer, business) {
       ${phone?.batteryHealth ? `<div class="item"><label>Batería</label><span>${phone.batteryHealth}%</span></div>` : ''}
     </div>
   </div>
-
   <div class="section">
     <div class="section-title">Comprador</div>
     <div class="grid">
@@ -83,7 +98,6 @@ async function exportRecibo(sale, phone, buyer, business) {
       <div class="item"><label>Email</label><span>${buyer?.email || '—'}</span></div>
     </div>
   </div>
-
   <div class="section">
     <div class="section-title">Detalle del pago</div>
     <div class="grid">
@@ -92,12 +106,9 @@ async function exportRecibo(sale, phone, buyer, business) {
       <div class="item"><label>Estado</label><span class="badge">${sale.status}</span></div>
     </div>
   </div>
-
   ${sale.notes ? `<div class="section"><div class="section-title">Observaciones</div><p style="font-size:13px;color:#444;line-height:1.6">${sale.notes}</p></div>` : ''}
-
   <div class="watermark">
-    Recibo generado el ${new Date().toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })} · 
-    Powered by <span>Genesys</span>
+    Recibo generado el ${new Date().toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })} · Powered by <span>Genesys</span>
   </div>
   </body></html>`;
 
@@ -107,21 +118,14 @@ async function exportRecibo(sale, phone, buyer, business) {
   iframe.contentDocument.open();
   iframe.contentDocument.write(html);
   iframe.contentDocument.close();
-
   await new Promise(r => setTimeout(r, 600));
-
-  const canvas = await html2canvas(iframe.contentDocument.body, {
-    scale: 2, useCORS: true, backgroundColor: '#ffffff', width: 780,
-  });
-
+  const canvas = await html2canvas(iframe.contentDocument.body, { scale: 2, useCORS: true, backgroundColor: '#ffffff', width: 780 });
   document.body.removeChild(iframe);
-
   const imgData = canvas.toDataURL('image/png');
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
   const imgHeight = pageWidth * (canvas.height / canvas.width);
-
   pdf.addImage(imgData, 'PNG', 0, 0, pageWidth, imgHeight <= pageHeight ? imgHeight : pageHeight);
   pdf.save(`recibo-${(phone?.model || 'producto').replace(/\s+/g, '-')}-${sale.saleDate}.pdf`);
 }
@@ -240,7 +244,6 @@ function Modal({ sale, phones, buyers, onClose, onSave, saving }) {
               <textarea className="form-input" rows={2} value={form.notes} onChange={e => set('notes', e.target.value)} placeholder="Observaciones sobre la venta..." />
             </div>
           </div>
-
         </div>
         <div className="modal-footer">
           <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
@@ -257,11 +260,18 @@ export default function Sales() {
   const [sales, setSales] = useState([]);
   const [phones, setPhones] = useState([]);
   const [buyers, setBuyers] = useState([]);
-  const { business } = useApp();
+  const { business, subStatus } = useApp();
+  const toast = useToast();
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('todos');
+  const [filterDate, setFilterDate] = useState('todos');
+  const [currentPage, setCurrentPage] = useState(1);
   const [modal, setModal] = useState(null);
   const [saving, setSaving] = useState(false);
+
+  // Plan del negocio
+  const plan = business?.plan || 'emprendedor';
+  const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.emprendedor;
 
   useEffect(() => {
     const u1 = salesApi.subscribe(setSales);
@@ -270,16 +280,34 @@ export default function Sales() {
     return () => { u1(); u2(); u3(); };
   }, []);
 
+  useEffect(() => setCurrentPage(1), [search, filterStatus, filterDate]);
+
   const getPhone = (id) => phones.find(p => p.id === id);
   const getBuyer = (id) => buyers.find(b => b.id === id);
+
+  const filterByDate = (s) => {
+    if (filterDate === 'todos') return true;
+    if (!s.saleDate) return false;
+    const d = new Date(s.saleDate);
+    const now = new Date();
+    if (filterDate === 'hoy') return s.saleDate === now.toISOString().split('T')[0];
+    if (filterDate === 'semana') { const w = new Date(now); w.setDate(now.getDate() - 7); return d >= w; }
+    if (filterDate === 'mes') return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    if (filterDate === 'mes_anterior') { const p = new Date(now); p.setMonth(now.getMonth() - 1); return d.getMonth() === p.getMonth() && d.getFullYear() === p.getFullYear(); }
+    return true;
+  };
 
   const filtered = sales.filter(s => {
     const q = search.toLowerCase();
     const phone = getPhone(s.phoneId);
     const buyer = getBuyer(s.buyerId);
     return (phone?.model?.toLowerCase().includes(q) || buyer?.name?.toLowerCase().includes(q) || s.paymentMethod?.toLowerCase().includes(q) || s.source?.toLowerCase().includes(q))
-      && (filterStatus === 'todos' || s.status === filterStatus);
+      && (filterStatus === 'todos' || s.status === filterStatus)
+      && filterByDate(s);
   });
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const handleSave = async (form) => {
     setSaving(true);
@@ -287,29 +315,79 @@ export default function Sales() {
       if (modal === 'new') {
         await salesApi.add(form);
         if (form.phoneId) await phonesApi.update(form.phoneId, { status: 'vendido' });
+        toast('Venta registrada correctamente', 'success');
       } else {
         await salesApi.update(modal.id, form);
+        toast('Venta actualizada', 'success');
       }
       setModal(null);
-    } catch (e) { alert(e.message); } finally { setSaving(false); }
+    } catch (e) { toast(e.message, 'error'); } finally { setSaving(false); }
   };
 
   const handleDelete = async (id) => {
     if (!confirm('¿Eliminar esta venta?')) return;
-    try { await salesApi.remove(id); } catch (e) { alert(e.message); }
+    try {
+      await salesApi.remove(id);
+      toast('Venta eliminada', 'warning');
+    } catch (e) { toast(e.message, 'error'); }
+  };
+
+  const exportExcel = () => {
+    if (!limits.canExportExcel) {
+      toast('El exportar a Excel no está disponible en tu plan. Actualizá al plan Pyme o Empresa.', 'warning');
+      return;
+    }
+    const data = filtered.map(s => {
+      const phone = getPhone(s.phoneId);
+      const buyer = getBuyer(s.buyerId);
+      return {
+        'Fecha': s.saleDate,
+        'Equipo': phone?.model || '—',
+        'Almacenamiento': phone?.storage || '—',
+        'Color': phone?.color || '—',
+        'Comprador': buyer?.name || '—',
+        'DNI': buyer?.dni || '—',
+        'Precio venta': Number(s.salePrice || 0),
+        'Costo': Number(s.costPrice || 0),
+        'Ganancia': Number(s.salePrice || 0) - Number(s.costPrice || 0),
+        'Forma de pago': s.paymentMethod || '—',
+        'Cuotas': s.installments || '—',
+        'Origen': s.source || '—',
+        'Estado': s.status,
+        'Garantía (días)': s.warrantyDays || 30,
+        'Notas': s.notes || '',
+      };
+    });
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Ventas');
+    XLSX.writeFile(wb, `ventas-${business?.name || 'negocio'}-${new Date().toISOString().split('T')[0]}.xlsx`);
+    toast('Excel exportado correctamente', 'success');
   };
 
   const totalIngresos = sales.filter(s => s.status === 'completada').reduce((a, s) => a + Number(s.salePrice || 0), 0);
   const totalGanancia = sales.filter(s => s.status === 'completada').reduce((a, s) => a + (Number(s.salePrice || 0) - Number(s.costPrice || 0)), 0);
-  const statusBadge = { completada: 'badge-black', pendiente: 'badge-gray', cancelada: 'badge-outline' };
+  const statusBadge = { completada: 'badge-green', pendiente: 'badge-yellow', cancelada: 'badge-red' };
   const payIcon = { 'Efectivo': '💵', 'Transferencia': '📲', 'Cuotas con tarjeta': '💳', 'Cuotas sin tarjeta': '📅', 'Cripto': '₿', 'Mixto': '🔀' };
 
   return (
     <>
       <div className="page-header">
         <div><h2>Ventas</h2><p>{sales.length} operaciones registradas</p></div>
-        <button className="btn btn-primary" onClick={() => setModal('new')}><Plus size={15} /> Registrar venta</button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          {/* Botón Excel — visible siempre, bloqueado si no tiene plan */}
+          <button
+            className={`btn ${limits.canExportExcel ? 'btn-secondary' : 'btn-outline'}`}
+            onClick={exportExcel}
+            title={!limits.canExportExcel ? 'Disponible en plan Pyme o Empresa' : 'Exportar a Excel'}
+            style={{ opacity: limits.canExportExcel ? 1 : 0.6 }}>
+            <Download size={15} /> Exportar Excel
+            {!limits.canExportExcel && <span style={{ fontSize: 10, marginLeft: 4, background: '#d97706', color: '#fff', padding: '1px 6px', borderRadius: 10 }}>Pyme+</span>}
+          </button>
+          <button className="btn btn-primary" onClick={() => setModal('new')}><Plus size={15} /> Registrar venta</button>
+        </div>
       </div>
+
       <div className="page-body fade-up">
         <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(3,1fr)', marginBottom: 20 }}>
           <div className="stat-card">
@@ -324,6 +402,16 @@ export default function Sales() {
             <div className="stat-label">Ventas completadas</div>
             <div className="stat-value">{sales.filter(s => s.status === 'completada').length}</div>
           </div>
+        </div>
+
+        {/* Filtros de fecha */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+          {DATE_FILTERS.map(f => (
+            <button key={f.id} className={`btn btn-sm ${filterDate === f.id ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => setFilterDate(f.id)}>
+              {f.label}
+            </button>
+          ))}
         </div>
 
         <div className="toolbar">
@@ -357,7 +445,7 @@ export default function Sales() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map(s => {
+                  {paginated.map(s => {
                     const phone = getPhone(s.phoneId);
                     const buyer = getBuyer(s.buyerId);
                     const ganancia = Number(s.salePrice || 0) - Number(s.costPrice || 0);
@@ -369,17 +457,15 @@ export default function Sales() {
                         </td>
                         <td style={{ fontSize: 13 }}>{buyer?.name || '—'}</td>
                         <td style={{ fontSize: 12, color: 'var(--text2)' }}>{s.saleDate}</td>
-                        <td style={{ fontFamily: 'Bebas Neue', fontSize: 15 }}>{fmt(s.salePrice)}</td>
-                        <td style={{ fontFamily: 'Bebas Neue', fontSize: 15 }}>{fmt(ganancia)}</td>
+                        <td style={{ fontWeight: 700, color: 'var(--primary)' }}>{fmt(s.salePrice)}</td>
+                        <td style={{ fontWeight: 700, color: '#16a34a' }}>{fmt(ganancia)}</td>
                         <td>
                           <div style={{ fontSize: 12 }}>
                             {payIcon[s.paymentMethod] || ''} {s.paymentMethod}
                             {s.installments && <span style={{ color: 'var(--text3)' }}> · {s.installments}c</span>}
                           </div>
                         </td>
-                        <td>
-                          {s.source ? <SourceLabel source={s.source} /> : '—'}
-                        </td>
+                        <td>{s.source ? <SourceLabel source={s.source} /> : '—'}</td>
                         <td><span className={`badge ${statusBadge[s.status] || 'badge-gray'}`}>{s.status}</span></td>
                         <td>
                           <div style={{ display: 'flex', gap: 6 }}>
@@ -396,6 +482,22 @@ export default function Sales() {
                   })}
                 </tbody>
               </table>
+
+              {/* Paginación */}
+              {totalPages > 1 && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderTop: '1px solid var(--border)' }}>
+                  <span style={{ fontSize: 12, color: 'var(--text3)' }}>
+                    Mostrando {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filtered.length)} de {filtered.length}
+                  </span>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button className="btn btn-sm btn-secondary" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>←</button>
+                    {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map(p => (
+                      <button key={p} className={`btn btn-sm ${currentPage === p ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setCurrentPage(p)}>{p}</button>
+                    ))}
+                    <button className="btn btn-sm btn-secondary" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>→</button>
+                  </div>
+                </div>
+              )}
             </div>
           )
         }
