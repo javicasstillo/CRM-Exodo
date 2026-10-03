@@ -32,10 +32,10 @@ export default function SubscriptionGate({ children }) {
   };
 
   useEffect(() => {
-    if (subStatus === 'suspended' || subStatus === 'pending_payment') {
-      fetchPaymentLink();
-    }
-  }, [subStatus]);
+  if (subStatus === 'suspended' || subStatus === 'pending_payment') {
+    fetchPaymentLink(true);
+  }
+}, [subStatus]);
 
   // Trial activo — banner de aviso cuando quedan 5 días o menos
   if (subStatus === 'trial') {

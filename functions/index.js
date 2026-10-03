@@ -69,11 +69,19 @@ exports.registerBusiness = onRequest(async (req, res) => {
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    await db.collection('businesses').doc(uid).set({
-      name: businessName, plan, status: 'trial', trialEnd,
-      currency: 'ARS', lowStockThreshold: 3, defaultWarrantyDays: 30,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
+    const planesConTrial = ['emprendedor'];
+const tieneTrial = planesConTrial.includes(plan);
+
+await db.collection('businesses').doc(uid).set({
+  name: businessName,
+  plan,
+  status: tieneTrial ? 'trial' : 'pending_payment',
+  trialEnd: tieneTrial ? trialEnd : null,
+  currency: 'ARS',
+  lowStockThreshold: 3,
+  defaultWarrantyDays: 30,
+  createdAt: admin.firestore.FieldValue.serverTimestamp(),
+});
 
     res.status(200).json({ success: true, uid });
   } catch (e) {
