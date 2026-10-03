@@ -735,3 +735,11 @@ html, body {
     padding-left: 56px !important;
   }
 }
+
+@media (max-width: 768px) {
+  /* Ocultar alerta de stock bajo en mobile */
+  header .btn[style*="background: #fff1f1"],
+  header a[style*="background: #fff1f1"] {
+    display: none !important;
+  }
+}
