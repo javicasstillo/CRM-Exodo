@@ -42,7 +42,7 @@ async function getOrCreatePlan(planKey) {
 }
 
 // ── 1. Registrar nuevo negocio ───────────────────────────────────────────
-exports.registerBusiness = onCall(async (request) => {
+exports.registerBusiness = onCall({ cors: ['https://app.genesys.com.ar', 'http://localhost:5173'] }, async (request) => {
   const { email, password, businessName, plan = "emprendedor" } = request.data;
 
   if (!email || !password || !businessName) {
@@ -83,7 +83,7 @@ exports.registerBusiness = onCall(async (request) => {
 });
 
 // ── 2. Crear suscripción en MP ───────────────────────────────────────────
-exports.createSubscription = onCall(async (request) => {
+exports.createSubscription = onCall({ cors: ['https://app.genesys.com.ar', 'http://localhost:5173'] }, async (request) => {
   const { planKey = "emprendedor" } = request.data;
   const uid = request.auth?.uid;
 
@@ -184,7 +184,7 @@ exports.checkTrials = onRequest(async (req, res) => {
 });
 
 // ── 5. Estado del negocio (lo llama el CRM al iniciar) ──────────────────
-exports.getBusinessStatus = onCall(async (request) => {
+exports.getBusinessStatus = onCall({ cors: ['https://app.genesys.com.ar', 'http://localhost:5173'] }, async (request) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "No autenticado");
 
