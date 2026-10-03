@@ -151,10 +151,7 @@ export default function Sidebar({ page, onNavigate, onLogout, className = '', bu
 
         {/* Footer */}
         <div className="sidebar-footer">
-          <button className="nav-item" onClick={onToggleDark} style={{ width: '100%' }}>
-            {darkMode ? <Sun size={16} /> : <Moon size={16} />}
-            {darkMode ? 'Modo claro' : 'Modo oscuro'}
-          </button>
+          
           <button className="nav-item" onClick={onLogout} style={{ width: '100%', marginTop: 2 }}>
             <LogOut size={16} /> Cerrar sesión
           </button>

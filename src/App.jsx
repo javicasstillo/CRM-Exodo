@@ -68,7 +68,7 @@ function AppShell({ user }) {
   const [page, setPage]               = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [pageLoading, setPageLoading] = useState(false);
-  const [darkMode, setDarkMode]       = useState(() => localStorage.getItem('theme') === 'dark');
+  const [darkMode, setDarkMode] = useState(false);
 
   const isSuperAdmin = user?.uid === SUPER_ADMIN_UID;
 
@@ -114,8 +114,6 @@ function AppShell({ user }) {
         className={sidebarOpen ? 'open' : ''}
         business={business}
         profile={profile}
-        darkMode={darkMode}
-        onToggleDark={() => setDarkMode(d => !d)}
         isSuperAdmin={isSuperAdmin}
       />
 
