@@ -16,6 +16,30 @@ const CATEGORIES = {
     'iPhone 15', 'iPhone 15 Plus', 'iPhone 15 Pro', 'iPhone 15 Pro Max',
     'iPhone 16', 'iPhone 16 Plus', 'iPhone 16 Pro', 'iPhone 16 Pro Max',
   ],
+  'Samsung': [
+    'Samsung Galaxy A05', 'Samsung Galaxy A15', 'Samsung Galaxy A25', 'Samsung Galaxy A35', 'Samsung Galaxy A55',
+    'Samsung Galaxy A54', 'Samsung Galaxy A34', 'Samsung Galaxy A14',
+    'Samsung Galaxy S23', 'Samsung Galaxy S23+', 'Samsung Galaxy S23 Ultra',
+    'Samsung Galaxy S24', 'Samsung Galaxy S24+', 'Samsung Galaxy S24 Ultra',
+    'Samsung Galaxy S25', 'Samsung Galaxy S25+', 'Samsung Galaxy S25 Ultra',
+    'Samsung Galaxy Z Fold 5', 'Samsung Galaxy Z Fold 6',
+    'Samsung Galaxy Z Flip 5', 'Samsung Galaxy Z Flip 6',
+  ],
+  'Motorola': [
+    'Motorola Moto G04', 'Motorola Moto G14', 'Motorola Moto G24', 'Motorola Moto G34', 'Motorola Moto G54', 'Motorola Moto G84',
+    'Motorola Edge 40', 'Motorola Edge 40 Neo', 'Motorola Edge 40 Pro',
+    'Motorola Edge 50', 'Motorola Edge 50 Pro', 'Motorola Edge 50 Ultra',
+    'Motorola Razr 40', 'Motorola Razr 40 Ultra',
+    'Motorola Razr 50', 'Motorola Razr 50 Ultra',
+  ],
+  'Xiaomi': [
+    'Xiaomi Redmi 12', 'Xiaomi Redmi 12C', 'Xiaomi Redmi 13', 'Xiaomi Redmi 13C',
+    'Xiaomi Redmi Note 12', 'Xiaomi Redmi Note 13', 'Xiaomi Redmi Note 13 Pro',
+    'Xiaomi 13', 'Xiaomi 13 Pro', 'Xiaomi 13T', 'Xiaomi 13T Pro',
+    'Xiaomi 14', 'Xiaomi 14 Pro', 'Xiaomi 14T', 'Xiaomi 14T Pro',
+    'POCO X5', 'POCO X5 Pro', 'POCO X6', 'POCO X6 Pro',
+    'POCO M6 Pro', 'POCO F5', 'POCO F6',
+  ],
   'Apple Watch': [
     'Apple Watch SE', 'Apple Watch SE 2',
     'Apple Watch Series 6', 'Apple Watch Series 7', 'Apple Watch Series 8', 'Apple Watch Series 9', 'Apple Watch Series 10',
@@ -26,29 +50,74 @@ const CATEGORIES = {
     'AirPods Pro', 'AirPods Pro 2',
     'AirPods Max',
   ],
+  'Tablet': [
+    'iPad Mini 6', 'iPad Mini 7',
+    'iPad 9', 'iPad 10',
+    'iPad Air 4', 'iPad Air 5', 'iPad Air M2',
+    'iPad Pro 11 M2', 'iPad Pro 11 M4', 'iPad Pro 13 M2', 'iPad Pro 13 M4',
+    'Samsung Galaxy Tab A8', 'Samsung Galaxy Tab A9', 'Samsung Galaxy Tab S8', 'Samsung Galaxy Tab S9',
+    'Lenovo Tab M10', 'Lenovo Tab P11',
+  ],
+  'Computadora': [
+    'MacBook Air M1', 'MacBook Air M2', 'MacBook Air M3',
+    'MacBook Pro 13 M2', 'MacBook Pro 14 M3', 'MacBook Pro 16 M3',
+    'iMac M1', 'iMac M3',
+    'Notebook HP', 'Notebook Dell', 'Notebook Lenovo', 'Notebook Asus', 'Notebook Acer',
+    'PC Armada',
+  ],
   'Parlante': [
-    'JBL Go 4', 'JBL Go 4 Pro',
-    'JBL Flip 6', 'JBL Charge 5', 'JBL Xtreme 3',
+    'JBL Go 4', 'JBL Go 4 Pro', 'JBL Flip 6', 'JBL Charge 5', 'JBL Xtreme 3',
+    'Sony SRS-XB100', 'Sony SRS-XB13',
+    'Bose SoundLink Flex', 'Bose SoundLink Mini',
+  ],
+  'Auriculares': [
+    'Sony WH-1000XM5', 'Sony WF-1000XM5',
+    'Bose QuietComfort 45', 'Bose QuietComfort Ultra',
+    'Samsung Galaxy Buds 2', 'Samsung Galaxy Buds 2 Pro', 'Samsung Galaxy Buds 3',
+    'JBL Tune 770NC', 'JBL Live 770NC',
   ],
   'Cargador': [
     'Cargador Apple 20W Original', 'Cargador Apple 20W Replica',
     'Cargador Apple 35W Original', 'Cargador Apple 35W Replica',
-    'Cargador Apple 67W Original', 'Cargador Apple 67W Replica',
     'Cargador MagSafe Original', 'Cargador MagSafe Replica',
-    'Cable USB-C a Lightning Original', 'Cable USB-C a Lightning Replica',
-    'Cable USB-C a USB-C Original', 'Cable USB-C a USB-C Replica',
+    'Cargador Samsung 25W Original', 'Cargador Samsung 45W Original',
+    'Cargador Inalámbrico 15W', 'Cargador Inalámbrico 10W',
+    'Cable USB-C a Lightning Original', 'Cable USB-C a USB-C Original',
+    'Cable USB-C a Lightning Replica', 'Cable USB-C a USB-C Replica',
   ],
   'Battery Pack': [
     'Battery Pack MagSafe Original', 'Battery Pack MagSafe Replica',
     'Battery Pack USB-C 5000mAh', 'Battery Pack USB-C 10000mAh', 'Battery Pack USB-C 20000mAh',
   ],
-  'Otro': ['Otro'],
+  'Accesorio': [
+    'Funda iPhone', 'Funda Samsung', 'Funda Universal',
+    'Vidrio Templado iPhone', 'Vidrio Templado Samsung', 'Vidrio Templado Universal',
+    'Soporte Auto', 'Soporte Escritorio',
+    'Mouse Inalámbrico', 'Teclado Inalámbrico',
+    'Hub USB-C', 'Adaptador',
+  ],
+  'Otro': [],
 };
 
-const STORAGE = ['N/A', '16GB','32GB','64GB','128GB','256GB','512GB','1TB'];
+const STORAGE = ['N/A', '16GB', '32GB', '64GB', '128GB', '256GB', '512GB', '1TB', '2TB'];
 const CONDITIONS = ['Nuevo', 'Como nuevo', 'Excelente', 'Muy bueno', 'Bueno', 'Regular'];
-const COLORS = ['Negro', 'Blanco', 'Rojo', 'Azul', 'Celeste', 'Verde', 'Amarillo', 'Rosa', 'Morado', 'Natural', 'Titanio', 'Starlight', 'Midnight', 'Otro'];
-const CAT_ICON = { 'iPhone': '📱', 'Apple Watch': '⌚', 'AirPods': '🎧', 'Parlante': '🔊', 'Cargador': '🔌', 'Battery Pack': '🔋', 'Otro': '📦' };
+const COLORS = ['Negro', 'Blanco', 'Rojo', 'Azul', 'Celeste', 'Verde', 'Amarillo', 'Rosa', 'Morado', 'Gris', 'Dorado', 'Natural', 'Titanio', 'Starlight', 'Midnight', 'Otro'];
+
+const CAT_ICON = {
+  'iPhone': '📱', 'Samsung': '📱', 'Motorola': '📱', 'Xiaomi': '📱',
+  'Apple Watch': '⌚', 'AirPods': '🎧', 'Tablet': '📟',
+  'Computadora': '💻', 'Parlante': '🔊', 'Auriculares': '🎧',
+  'Cargador': '🔌', 'Battery Pack': '🔋', 'Accesorio': '🧩', 'Otro': '📦',
+};
+
+// Categorías que necesitan IMEI
+const NEEDS_IMEI = ['iPhone', 'Samsung', 'Motorola', 'Xiaomi'];
+// Categorías que muestran almacenamiento
+const NEEDS_STORAGE = ['iPhone', 'Samsung', 'Motorola', 'Xiaomi', 'Apple Watch', 'AirPods', 'Tablet', 'Computadora'];
+// Categorías que muestran batería
+const NEEDS_BATTERY = ['iPhone', 'Samsung', 'Motorola', 'Xiaomi', 'Apple Watch'];
+// Categorías que son unitarias (sin cantidad)
+const IS_UNIQUE = ['iPhone', 'Samsung', 'Motorola', 'Xiaomi', 'Computadora'];
 
 const getCategory = (model) => {
   for (const [cat, models] of Object.entries(CATEGORIES)) {
@@ -57,11 +126,11 @@ const getCategory = (model) => {
   return 'Otro';
 };
 
-const needsQuantity = (category) => category !== 'iPhone';
+const needsQuantity = (category) => !IS_UNIQUE.includes(category);
 
 const EMPTY = {
-  category: 'iPhone', model: 'iPhone 13', storage: '128GB', color: 'Negro', condition: 'Excelente',
-  imei: '', serial: '', costPrice: '', salePrice: '', currency: 'ARS',
+  category: 'iPhone', model: 'iPhone 13', customModel: '', storage: '128GB', color: 'Negro',
+  condition: 'Excelente', imei: '', serial: '', costPrice: '', salePrice: '', currency: 'ARS',
   batteryHealth: '', notes: '', status: 'disponible', photo: null, quantity: 1,
 };
 
@@ -120,23 +189,43 @@ function QuantitySelector({ value, onChange }) {
 }
 
 function Modal({ phone, onClose, onSave, saving }) {
-  const [form, setForm] = useState({ quantity: 1, ...phone } || EMPTY);
+  const [form, setForm] = useState({ quantity: 1, customModel: '', ...phone } || EMPTY);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   const handleCategory = (cat) => {
-    const firstModel = CATEGORIES[cat][0];
-    setForm(f => ({ ...f, category: cat, model: firstModel, quantity: cat === 'iPhone' ? 1 : (f.quantity || 1) }));
+    const models = CATEGORIES[cat];
+    const firstModel = models?.length > 0 ? models[0] : '';
+    setForm(f => ({
+      ...f,
+      category: cat,
+      model: firstModel,
+      customModel: '',
+      quantity: IS_UNIQUE.includes(cat) ? 1 : (f.quantity || 1),
+    }));
   };
 
-  const isWatch = form.category === 'Apple Watch';
-  const needsStorage = ['iPhone', 'Apple Watch', 'AirPods'].includes(form.category);
-  const needsBattery = ['iPhone', 'Apple Watch'].includes(form.category);
-  const needsImei = ['iPhone', 'Apple Watch'].includes(form.category);
+  const isOtro = form.category === 'Otro';
+  const hasModels = CATEGORIES[form.category]?.length > 0;
+  const useCustomModel = isOtro || form.model === '__custom__';
+
+  const needsStorage = NEEDS_STORAGE.includes(form.category);
+  const needsBattery = NEEDS_BATTERY.includes(form.category);
+  const needsImei = NEEDS_IMEI.includes(form.category);
   const showQuantity = needsQuantity(form.category);
+
+  const displayModel = useCustomModel ? form.customModel : form.model;
 
   const margen = form.salePrice && form.costPrice
     ? (((Number(form.salePrice) - Number(form.costPrice)) / Number(form.costPrice)) * 100).toFixed(1)
     : null;
+
+  const handleSaveForm = () => {
+    const finalForm = {
+      ...form,
+      model: useCustomModel ? (form.customModel || 'Sin modelo') : form.model,
+    };
+    if (finalForm.model) onSave(finalForm);
+  };
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -148,10 +237,11 @@ function Modal({ phone, onClose, onSave, saving }) {
         <div className="modal-body">
           <PhotoUploader value={form.photo} onChange={v => set('photo', v)} />
 
+          {/* Categoría */}
           <div className="form-group" style={{ marginTop: 14 }}>
             <label className="form-label">Categoría</label>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {Object.keys(CATEGORIES).filter(c => c !== 'Otro').map(cat => (
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {Object.keys(CATEGORIES).map(cat => (
                 <button key={cat} type="button"
                   className={`btn btn-sm ${form.category === cat ? 'btn-primary' : 'btn-secondary'}`}
                   onClick={() => handleCategory(cat)}>
@@ -161,12 +251,42 @@ function Modal({ phone, onClose, onSave, saving }) {
             </div>
           </div>
 
+          {/* Modelo */}
           <div className="form-grid form-grid-2">
             <div className="form-group">
               <label className="form-label">Modelo</label>
-              <select className="form-input" value={form.model} onChange={e => set('model', e.target.value)}>
-                {CATEGORIES[form.category]?.map(m => <option key={m}>{m}</option>)}
-              </select>
+              {isOtro || !hasModels ? (
+                <input
+                  className="form-input"
+                  placeholder="Escribí el modelo..."
+                  value={form.customModel || ''}
+                  onChange={e => set('customModel', e.target.value)}
+                />
+              ) : (
+                <>
+                  <select className="form-input" value={form.model} onChange={e => {
+                    if (e.target.value === '__custom__') {
+                      set('model', '__custom__');
+                    } else {
+                      set('model', e.target.value);
+                      set('customModel', '');
+                    }
+                  }}>
+                    {CATEGORIES[form.category]?.map(m => <option key={m} value={m}>{m}</option>)}
+                    <option value="__custom__">✏️ Escribir modelo...</option>
+                  </select>
+                  {form.model === '__custom__' && (
+                    <input
+                      className="form-input"
+                      style={{ marginTop: 6 }}
+                      placeholder="Escribí el modelo exacto..."
+                      value={form.customModel || ''}
+                      onChange={e => set('customModel', e.target.value)}
+                      autoFocus
+                    />
+                  )}
+                </>
+              )}
             </div>
             <div className="form-group">
               <label className="form-label">Estado</label>
@@ -179,6 +299,7 @@ function Modal({ phone, onClose, onSave, saving }) {
             </div>
           </div>
 
+          {/* Cantidad */}
           {showQuantity && (
             <div style={{ background: 'var(--bg3)', borderRadius: 10, padding: '14px 16px', marginBottom: 14 }}>
               <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 12 }}>Cantidad en stock</div>
@@ -191,12 +312,13 @@ function Modal({ phone, onClose, onSave, saving }) {
             </div>
           )}
 
+          {/* Storage, Color, Condición */}
           <div className="form-grid form-grid-3">
             {needsStorage && (
               <div className="form-group">
                 <label className="form-label">Almacenamiento</label>
-                <select className="form-input" value={form.storage} onChange={e => set('storage', e.target.value)}>
-                  {STORAGE.filter(s => s !== 'N/A').map(s => <option key={s}>{s}</option>)}
+                <select className="form-input" value={form.storage || 'N/A'} onChange={e => set('storage', e.target.value)}>
+                  {STORAGE.map(s => <option key={s}>{s}</option>)}
                 </select>
               </div>
             )}
@@ -214,17 +336,19 @@ function Modal({ phone, onClose, onSave, saving }) {
             </div>
           </div>
 
+          {/* IMEI / Serial / Batería */}
           <div className="form-grid form-grid-2">
-            {needsImei
-              ? <div className="form-group">
-                  <label className="form-label">{isWatch ? 'Serial / IMEI' : 'IMEI'}</label>
-                  <input className="form-input" placeholder="352xxx..." value={form.imei || ''} onChange={e => set('imei', e.target.value)} />
-                </div>
-              : <div className="form-group">
-                  <label className="form-label">Serial / Código</label>
-                  <input className="form-input" placeholder="Serial..." value={form.serial || ''} onChange={e => set('serial', e.target.value)} />
-                </div>
-            }
+            {needsImei ? (
+              <div className="form-group">
+                <label className="form-label">IMEI</label>
+                <input className="form-input" placeholder="352xxx..." value={form.imei || ''} onChange={e => set('imei', e.target.value)} />
+              </div>
+            ) : (
+              <div className="form-group">
+                <label className="form-label">Serial / Código</label>
+                <input className="form-input" placeholder="Serial..." value={form.serial || ''} onChange={e => set('serial', e.target.value)} />
+              </div>
+            )}
             {needsBattery && (
               <div className="form-group">
                 <label className="form-label">Batería (%)</label>
@@ -233,11 +357,12 @@ function Modal({ phone, onClose, onSave, saving }) {
             )}
           </div>
 
+          {/* Precios */}
           <div style={{ background: 'var(--bg3)', borderRadius: 10, padding: '14px 16px', marginBottom: 14 }}>
             <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 12 }}>Precios</div>
             <div className="form-grid form-grid-3">
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">Costo (lo que pagaste)</label>
+                <label className="form-label">Costo</label>
                 <input className="form-input" type="number" placeholder="0" value={form.costPrice} onChange={e => set('costPrice', e.target.value)} />
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
@@ -254,7 +379,7 @@ function Modal({ phone, onClose, onSave, saving }) {
             </div>
             {margen !== null && (
               <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text2)' }}>
-                Ganancia estimada: <strong>{fmt(Number(form.salePrice) - Number(form.costPrice))}</strong> · Margen: <strong>{margen}%</strong>
+                Ganancia: <strong>{fmt(Number(form.salePrice) - Number(form.costPrice))}</strong> · Margen: <strong>{margen}%</strong>
                 {showQuantity && form.quantity > 1 && (
                   <span> · Invertido: <strong>{fmt(Number(form.costPrice) * Number(form.quantity))}</strong></span>
                 )}
@@ -269,7 +394,7 @@ function Modal({ phone, onClose, onSave, saving }) {
         </div>
         <div className="modal-footer">
           <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
-          <button className="btn btn-primary" disabled={saving} onClick={() => { if (form.model) onSave(form); }}>
+          <button className="btn btn-primary" disabled={saving} onClick={handleSaveForm}>
             {saving ? 'Guardando...' : phone ? 'Guardar cambios' : 'Agregar producto'}
           </button>
         </div>
@@ -333,8 +458,12 @@ export default function Phones() {
     if (s === 'vendido') return 'badge-gray';
     return 'badge-gray';
   };
+
   const labelStatus = { disponible: 'Disponible', vendido: 'Vendido', reservado: 'Reservado', reparacion: 'Reparación' };
   const totalUnidades = phones.filter(p => p.status === 'disponible').reduce((a, p) => a + (Number(p.quantity) || 1), 0);
+
+  // Categorías que tienen productos en stock para los filtros
+  const catsEnUso = ['todas', ...new Set(phones.map(p => p.category || getCategory(p.model)))];
 
   return (
     <>
@@ -347,11 +476,11 @@ export default function Phones() {
       </div>
       <div className="page-body fade-up">
 
+        {/* Filtros por categoría — solo muestra las que tienen productos */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-          <button className={`btn btn-sm ${filterCat === 'todas' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setFilterCat('todas')}>Todas</button>
-          {Object.keys(CATEGORIES).filter(c => c !== 'Otro').map(cat => (
+          {catsEnUso.map(cat => (
             <button key={cat} className={`btn btn-sm ${filterCat === cat ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setFilterCat(cat)}>
-              {CAT_ICON[cat]} {cat}
+              {cat === 'todas' ? 'Todas' : `${CAT_ICON[cat] || '📦'} ${cat}`}
             </button>
           ))}
         </div>
@@ -388,7 +517,7 @@ export default function Phones() {
                         <span className={`badge ${badgeStatus(p.status)}`}>{labelStatus[p.status] || p.status}</span>
                       </div>
                       <div style={{ position: 'absolute', top: 8, left: 8 }}>
-                        <span className="badge badge-blue">{CAT_ICON[cat]} {cat}</span>
+                        <span className="badge badge-blue">{CAT_ICON[cat] || '📦'} {cat}</span>
                       </div>
                       {showQty && p.status === 'disponible' && (
                         <div style={{ position: 'absolute', bottom: 8, right: 8, background: isLowStock ? 'rgba(239,68,68,0.9)' : 'rgba(0,0,0,0.7)', color: '#fff', fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 20 }}>
@@ -419,7 +548,6 @@ export default function Phones() {
                           Costo: {fmt(p.costPrice)} · Ganancia: {fmt(Number(p.salePrice) - Number(p.costPrice))}
                         </div>
                       )}
-
                       {showQty && p.status === 'disponible' && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
                           <span style={{ fontSize: 11, color: 'var(--text3)', flex: 1 }}>Stock:</span>
@@ -436,7 +564,6 @@ export default function Phones() {
                           </div>
                         </div>
                       )}
-
                       <div className="phone-card-footer">
                         <div className="phone-price">{fmt(p.salePrice)}<span style={{ fontSize: 10, fontFamily: 'Inter', color: 'var(--text3)' }}> {p.currency}</span></div>
                         <div style={{ display: 'flex', gap: 6 }}>
