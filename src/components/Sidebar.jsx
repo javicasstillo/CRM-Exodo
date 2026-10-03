@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, Smartphone, Users, ShoppingCart, TrendingUp, LogOut, DollarSign, Search, X, Bell, Settings, Moon, Sun } from 'lucide-react';
+import { LayoutDashboard, Smartphone, Users, ShoppingCart, TrendingUp, LogOut, DollarSign, Search, X, Bell, Settings, Moon, Sun, Shield } from 'lucide-react';
 import { phonesApi } from '../api';
+
+const SUPER_ADMIN_UID = '5aHXAuMsBxPTlmyW9kDSM4tGXNX2';
 
 const NAV = [
   { id: 'dashboard', label: 'Panel',         icon: LayoutDashboard },
@@ -11,14 +13,14 @@ const NAV = [
   { id: 'stats',     label: 'Estadísticas',   icon: TrendingUp },
 ];
 
-export default function Sidebar({ page, onNavigate, onLogout, className = '', business, profile, darkMode, onToggleDark }) {
-  const [phones, setPhones]       = useState([]);
-  const [searchQ, setSearchQ]     = useState('');
+export default function Sidebar({ page, onNavigate, onLogout, className = '', business, profile, darkMode, onToggleDark, isSuperAdmin }) {
+  const [phones, setPhones]         = useState([]);
+  const [searchQ, setSearchQ]       = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
 
   useEffect(() => phonesApi.subscribe(setPhones), []);
 
-  const lowStock = phones.filter(p => p.status === 'disponible' && (Number(p.quantity) || 1) < 3);
+  const lowStock   = phones.filter(p => p.status === 'disponible' && (Number(p.quantity) || 1) < 3);
   const alertCount = lowStock.length;
 
   const searchResults = searchQ.length > 1
@@ -34,7 +36,8 @@ export default function Sidebar({ page, onNavigate, onLogout, className = '', bu
   return (
     <>
       <div className={`sidebar ${className}`}>
-        {/* Logo / nombre del negocio */}
+
+        {/* Logo */}
         <div className="sidebar-logo">
           <div className="logo-mark">
             {business?.logo
@@ -107,12 +110,25 @@ export default function Sidebar({ page, onNavigate, onLogout, className = '', bu
             </button>
           ))}
 
-          {/* Configuración — solo admin */}
-          {isAdmin && (
+          {/* Configuración — solo admin del negocio (no superadmin) */}
+          {isAdmin && !isSuperAdmin && (
             <>
               <div className="nav-section-label" style={{ marginTop: 8 }}>Admin</div>
               <button className={`nav-item ${page === 'settings' ? 'active' : ''}`} onClick={() => onNavigate('settings')}>
                 <Settings size={16} /> Configuración
+              </button>
+            </>
+          )}
+
+          {/* Panel admin — solo superadmin */}
+          {isSuperAdmin && (
+            <>
+              <div className="nav-section-label" style={{ marginTop: 8 }}>Genesys</div>
+              <button className={`nav-item ${page === 'settings' ? 'active' : ''}`} onClick={() => onNavigate('settings')}>
+                <Settings size={16} /> Configuración
+              </button>
+              <button className={`nav-item ${page === 'admin' ? 'active' : ''}`} onClick={() => onNavigate('admin')}>
+                <Shield size={16} /> Panel Admin
               </button>
             </>
           )}
@@ -143,6 +159,7 @@ export default function Sidebar({ page, onNavigate, onLogout, className = '', bu
             <LogOut size={16} /> Cerrar sesión
           </button>
         </div>
+
       </div>
 
       {searchOpen && searchQ && (

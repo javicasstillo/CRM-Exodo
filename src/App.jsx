@@ -9,12 +9,16 @@ import Sales from './pages/Sales';
 import Expenses from './pages/Expenses';
 import Stats from './pages/Stats';
 import Settings from './pages/Settings';
+import AdminPanel from './pages/AdminPanel';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import { ToastProvider } from './context/ToastContext';
 import { AppProvider, useApp } from './context/AppContext';
 import SubscriptionGate from './components/SubscriptionGate';
 import { Menu } from 'lucide-react';
+
+// Tu UID de superadmin
+const SUPER_ADMIN_UID = '5aHXAuMsBxPTlmyW9kDSM4tGXNX2';
 
 const PAGE_TITLES = {
   dashboard:  'Panel',
@@ -24,6 +28,7 @@ const PAGE_TITLES = {
   expenses:   'Gastos',
   stats:      'Estadísticas',
   settings:   'Configuración',
+  admin:      'Admin — Genesys',
 };
 
 const PAGES = {
@@ -34,6 +39,7 @@ const PAGES = {
   expenses:   Expenses,
   stats:      Stats,
   settings:   Settings,
+  admin:      AdminPanel,
 };
 
 function Skeleton() {
@@ -64,6 +70,8 @@ function AppShell({ user }) {
   const [pageLoading, setPageLoading] = useState(false);
   const [darkMode, setDarkMode]       = useState(() => localStorage.getItem('theme') === 'dark');
 
+  const isSuperAdmin = user?.uid === SUPER_ADMIN_UID;
+
   useEffect(() => {
     document.title = `${PAGE_TITLES[page] || 'Panel'} — ${business?.name || 'Genesys App'}`;
   }, [page, business]);
@@ -73,8 +81,6 @@ function AppShell({ user }) {
     localStorage.setItem('theme', darkMode ? 'dark' : 'light');
   }, [darkMode]);
 
-  
-
   if (appLoading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', flexDirection: 'column', gap: 16, background: 'var(--bg)' }}>
       <div className="skeleton" style={{ width: 48, height: 48, borderRadius: 12 }} />
@@ -83,6 +89,7 @@ function AppShell({ user }) {
   );
 
   const PageComponent = PAGES[page] || Dashboard;
+  const isAdminPage = page === 'admin';
 
   const handleNavigate = (p) => {
     if (p === page) return;
@@ -109,20 +116,27 @@ function AppShell({ user }) {
         profile={profile}
         darkMode={darkMode}
         onToggleDark={() => setDarkMode(d => !d)}
+        isSuperAdmin={isSuperAdmin}
       />
 
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <Header
           profile={profile}
           business={business}
           onNavigate={handleNavigate}
           onLogout={logout}
         />
-        <SubscriptionGate>
+        {isAdminPage && isSuperAdmin ? (
           <main className="main-content" style={{ flex: 1 }}>
             {pageLoading ? <Skeleton /> : <PageComponent />}
           </main>
-        </SubscriptionGate>
+        ) : (
+          <SubscriptionGate>
+            <main className="main-content" style={{ flex: 1 }}>
+              {pageLoading ? <Skeleton /> : <PageComponent />}
+            </main>
+          </SubscriptionGate>
+        )}
       </div>
     </div>
   );
