@@ -1,18 +1,17 @@
 import { useState, useRef, useEffect } from 'react';
-import { Bell, ChevronDown, Settings, LogOut, User, Moon, Sun } from 'lucide-react';
+import { Bell, ChevronDown, Settings, LogOut, User } from 'lucide-react';
 import { phonesApi } from '../api';
 
 const ROLE_LABELS = { admin: 'Administrador', vendedor: 'Vendedor', viewer: 'Solo lectura' };
 const ROLE_COLORS = { admin: '#0d6efd', vendedor: '#16a34a', viewer: '#d97706' };
 
 export default function Header({ profile, business, onNavigate, onLogout }) {
-  const [phones, setPhones]       = useState([]);
-  const [menuOpen, setMenuOpen]   = useState(false);
+  const [phones, setPhones]     = useState([]);
+  const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef();
 
   useEffect(() => phonesApi.subscribe(setPhones), []);
 
-  // Cerrar menú al hacer click fuera
   useEffect(() => {
     const handler = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false); };
     document.addEventListener('mousedown', handler);
@@ -20,7 +19,6 @@ export default function Header({ profile, business, onNavigate, onLogout }) {
   }, []);
 
   const lowStock = phones.filter(p => p.status === 'disponible' && (Number(p.quantity) || 1) < 3);
-
   const initials = (name) => name?.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase() || '?';
 
   return (
@@ -39,9 +37,10 @@ export default function Header({ profile, business, onNavigate, onLogout }) {
         </span>
       </div>
 
-      {/* Alertas de stock */}
+      {/* Alertas de stock — oculto en mobile via CSS */}
       {lowStock.length > 0 && (
         <button
+          className="stock-alert-btn"
           onClick={() => onNavigate('phones')}
           style={{
             display: 'flex', alignItems: 'center', gap: 7,
@@ -79,8 +78,8 @@ export default function Header({ profile, business, onNavigate, onLogout }) {
             }
           </div>
 
-          {/* Info */}
-          <div style={{ textAlign: 'left' }}>
+          {/* Info — oculto en mobile */}
+          <div className="header-user-info" style={{ textAlign: 'left' }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', lineHeight: 1.2 }}>
               {profile?.name || 'Usuario'}
             </div>
@@ -101,7 +100,6 @@ export default function Header({ profile, business, onNavigate, onLogout }) {
             overflow: 'hidden', zIndex: 200,
             animation: 'fadeUp 0.15s ease',
           }}>
-            {/* Cabecera del menú */}
             <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', background: 'var(--bg2)' }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{profile?.name}</div>
               <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>{profile?.email}</div>
@@ -116,8 +114,6 @@ export default function Header({ profile, business, onNavigate, onLogout }) {
                 </span>
               </div>
             </div>
-
-            {/* Opciones */}
             <div style={{ padding: '6px' }}>
               <button className="dropdown-item" onClick={() => { onNavigate('settings'); setMenuOpen(false); }}>
                 <Settings size={14} /> Configuración

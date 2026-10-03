@@ -743,3 +743,8 @@ html, body {
     display: none !important;
   }
 }
+
+@media (max-width: 768px) {
+  .stock-alert-btn { display: none !important; }
+  .header-user-info { display: none !important; }
+}
