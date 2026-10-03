@@ -285,7 +285,10 @@ exports.getPaymentLink = onCall(async (request) => {
     amount: PLANS[planKey].amount,
   };
 
-  // ── 8. Cancelar suscripción ────────────────────────────────────────────
+  
+});
+
+// ── 8. Cancelar suscripción ────────────────────────────────────────────
 exports.cancelSubscription = onCall(async (request) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "No autenticado");
@@ -322,5 +325,4 @@ exports.cancelSubscription = onCall(async (request) => {
   } catch (e) {
     throw new HttpsError("internal", e.message);
   }
-});
 });
