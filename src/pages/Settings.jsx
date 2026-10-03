@@ -2,12 +2,16 @@ import { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { saveBusinessConfig, updateUserProfile, createInvitation } from '../firebase';
 import { useToast } from '../context/ToastContext';
-import { Building2, Users, Plus, Camera, Save, X, Shield, Trash2, Copy, Check, Mail, Clock } from 'lucide-react';
+import { Building2, Users, Plus, Camera, Save, X, Shield, Trash2, Copy, Check, Mail, Clock, CreditCard, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
 import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 
 const ROLE_LABELS = { admin: 'Administrador', vendedor: 'Vendedor', viewer: 'Solo lectura' };
 const ROLE_COLORS = { admin: '#0d6efd', vendedor: '#16a34a', viewer: '#d97706' };
+const PLAN_LABELS = { emprendedor: 'Pequeño Emprendedor', pyme: 'Pyme', empresa: 'Empresa' };
+const PLAN_PRICES = { emprendedor: 20000, pyme: 35000, empresa: 60000 };
+const fmt = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(n || 0);
 
 function AvatarUploader({ value, onChange, size = 80 }) {
   const ref = useRef();
@@ -76,7 +80,7 @@ function InviteModal({ profile, business, onClose }) {
             <>
               <div style={{ background: 'var(--primary-bg)', border: '1px solid rgba(13,110,253,0.2)', borderRadius: 10, padding: '12px 14px', fontSize: 12, color: 'var(--primary)', marginBottom: 16, display: 'flex', gap: 8 }}>
                 <Mail size={14} style={{ flexShrink: 0, marginTop: 1 }} />
-                <span>Generá un link de invitación y compartilo por WhatsApp o email. El usuario se registra solo con su propia contraseña. El link expira en <strong>7 días</strong>.</span>
+                <span>Generá un link de invitación y compartilo. El usuario se registra con su propia contraseña. Expira en <strong>7 días</strong>.</span>
               </div>
               <div className="form-group">
                 <label className="form-label">Email del usuario</label>
@@ -97,10 +101,9 @@ function InviteModal({ profile, business, onClose }) {
                 <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#f0fdf4', border: '2px solid #bbf7d0', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
                   <Check size={24} color="#16a34a" />
                 </div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>¡Link generado!</div>
+                <div style={{ fontSize: 15, fontWeight: 700 }}>¡Link generado!</div>
                 <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 4 }}>Compartilo con <strong>{form.email}</strong></div>
               </div>
-
               <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 14px' }}>
                 <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5 }}>
                   <Clock size={11} /> Expira en 7 días · Un solo uso
@@ -110,7 +113,6 @@ function InviteModal({ profile, business, onClose }) {
                   {copied ? <><Check size={14} /> Copiado!</> : <><Copy size={14} /> Copiar link</>}
                 </button>
               </div>
-
               <button className="btn btn-secondary" style={{ justifyContent: 'center' }}
                 onClick={() => { setLink(null); setForm({ email: '', role: 'vendedor' }); }}>
                 Generar otra invitación
@@ -132,14 +134,16 @@ function InviteModal({ profile, business, onClose }) {
 }
 
 export default function Settings() {
-  const { profile, business, refreshBusiness, refreshProfile } = useApp();
+  const { profile, business, refreshBusiness, refreshProfile, subStatus, trialDays } = useApp();
   const toast = useToast();
   const [tab, setTab] = useState('negocio');
   const [bizForm, setBizForm] = useState(null);
   const [profForm, setProfForm] = useState(null);
   const [users, setUsers] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [inviteModal, setInviteModal] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
 
   useEffect(() => {
     if (business) setBizForm({ ...business });
@@ -173,6 +177,20 @@ export default function Settings() {
     } catch (e) { toast(e.message, 'error'); } finally { setSaving(false); }
   };
 
+  const handleCancelSubscription = async () => {
+    setCancelling(true);
+    try {
+      const functions = getFunctions(undefined, 'us-central1');
+      const cancelSubscription = httpsCallable(functions, 'cancelSubscription');
+      await cancelSubscription();
+      await refreshBusiness();
+      setConfirmCancel(false);
+      toast('Suscripción cancelada. Tu acceso continúa hasta el próximo período.', 'info');
+    } catch (e) {
+      toast(e.message || 'Error al cancelar', 'error');
+    } finally { setCancelling(false); }
+  };
+
   const toggleUserActive = async (u) => {
     if (!confirm(`¿${u.active !== false ? 'Desactivar' : 'Activar'} a ${u.name}?`)) return;
     try {
@@ -183,10 +201,18 @@ export default function Settings() {
 
   const isAdmin = profile?.role === 'admin';
 
+  const STATUS_INFO = {
+    trial:           { label: 'Período de prueba', color: '#d97706', bg: '#fffbeb', icon: <Clock size={16} /> },
+    active:          { label: 'Activa',             color: '#16a34a', bg: '#f0fdf4', icon: <CheckCircle size={16} /> },
+    suspended:       { label: 'Suspendida',         color: '#dc2626', bg: '#fff1f1', icon: <XCircle size={16} /> },
+    pending_payment: { label: 'Pago pendiente',     color: '#0d6efd', bg: 'var(--primary-bg)', icon: <CreditCard size={16} /> },
+  };
+
   const TABS = [
-    { id: 'negocio',  label: 'Negocio',   icon: Building2 },
-    { id: 'perfil',   label: 'Mi perfil',  icon: Users },
-    { id: 'usuarios', label: 'Usuarios',   icon: Shield },
+    { id: 'negocio',      label: 'Negocio',       icon: Building2  },
+    { id: 'perfil',       label: 'Mi perfil',     icon: Users      },
+    { id: 'usuarios',     label: 'Usuarios',      icon: Shield     },
+    { id: 'suscripcion',  label: 'Suscripción',   icon: CreditCard },
   ];
 
   return (
@@ -196,7 +222,8 @@ export default function Settings() {
       </div>
       <div className="page-body fade-up">
 
-        <div style={{ display: 'flex', gap: 4, marginBottom: 24, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: 4, width: 'fit-content' }}>
+        {/* Tabs */}
+        <div style={{ display: 'flex', gap: 4, marginBottom: 24, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: 4, width: 'fit-content', flexWrap: 'wrap' }}>
           {TABS.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
               style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, transition: 'all 0.15s', background: tab === t.id ? 'var(--primary)' : 'none', color: tab === t.id ? '#fff' : 'var(--text2)' }}>
@@ -214,12 +241,12 @@ export default function Settings() {
                 <AvatarUploader value={bizForm.logo} onChange={v => setBizForm(f => ({ ...f, logo: v }))} size={72} />
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 600 }}>Logo del negocio</div>
-                  <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 3 }}>Se muestra en el sidebar y documentos</div>
+                  <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 3 }}>Se muestra en el sidebar</div>
                 </div>
               </div>
               <div className="form-group">
                 <label className="form-label">Nombre del negocio</label>
-                <input className="form-input" placeholder="Ej: ÉXODO Celulares" value={bizForm.name || ''} onChange={e => setBizForm(f => ({ ...f, name: e.target.value }))} />
+                <input className="form-input" placeholder="Ej: Mi Tienda Tech" value={bizForm.name || ''} onChange={e => setBizForm(f => ({ ...f, name: e.target.value }))} />
               </div>
               <div className="form-grid form-grid-2">
                 <div className="form-group">
@@ -241,7 +268,6 @@ export default function Settings() {
               <button className="btn btn-primary" disabled={saving || !isAdmin} onClick={saveBusiness} style={{ marginTop: 4 }}>
                 <Save size={14} /> {saving ? 'Guardando...' : 'Guardar cambios'}
               </button>
-              {!isAdmin && <p style={{ fontSize: 11, color: 'var(--text3)', marginTop: 8 }}>Solo el administrador puede modificar esto</p>}
             </div>
 
             <div className="card">
@@ -249,7 +275,7 @@ export default function Settings() {
               <div className="form-group">
                 <label className="form-label">Alerta stock bajo (unidades)</label>
                 <input className="form-input" type="number" min="1" max="20" value={bizForm.lowStockThreshold || 3} onChange={e => setBizForm(f => ({ ...f, lowStockThreshold: Number(e.target.value) }))} />
-                <span style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4, display: 'block' }}>Se alertará cuando un producto tenga menos de esta cantidad</span>
+                <span style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4, display: 'block' }}>Alertará cuando un producto tenga menos de esta cantidad</span>
               </div>
               <div className="form-group">
                 <label className="form-label">Días de garantía por defecto</label>
@@ -313,7 +339,6 @@ export default function Settings() {
                 </button>
               )}
             </div>
-
             <div className="table-wrap">
               <table>
                 <thead>
@@ -355,10 +380,8 @@ export default function Settings() {
                       </td>
                       <td>
                         {isAdmin && u.id !== profile?.id && (
-                          <button
-                            className={`btn btn-sm ${u.active !== false ? 'btn-danger' : 'btn-secondary'}`}
-                            onClick={() => toggleUserActive(u)}
-                            title={u.active !== false ? 'Desactivar' : 'Activar'}>
+                          <button className={`btn btn-sm ${u.active !== false ? 'btn-danger' : 'btn-secondary'}`}
+                            onClick={() => toggleUserActive(u)}>
                             <Trash2 size={12} />
                           </button>
                         )}
@@ -367,6 +390,94 @@ export default function Settings() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {/* TAB: Suscripción */}
+        {tab === 'suscripcion' && (
+          <div style={{ maxWidth: 560 }}>
+            <div className="card">
+              <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 18 }}>Mi suscripción</h3>
+
+              {/* Estado actual */}
+              {(() => {
+                const info = STATUS_INFO[subStatus] || STATUS_INFO.trial;
+                return (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderRadius: 12, background: info.bg, border: `1px solid ${info.color}30`, marginBottom: 20 }}>
+                    <div style={{ color: info.color }}>{info.icon}</div>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: info.color }}>Suscripción {info.label}</div>
+                      {subStatus === 'trial' && (
+                        <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2 }}>
+                          {trialDays > 0 ? `Quedan ${trialDays} días de prueba gratis` : 'Tu prueba gratuita vence hoy'}
+                        </div>
+                      )}
+                      {subStatus === 'active' && (
+                        <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2 }}>Renovación automática mensual</div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Plan actual */}
+              <div style={{ background: 'var(--bg2)', borderRadius: 12, padding: '16px 18px', marginBottom: 20 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 10 }}>Plan actual</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>{PLAN_LABELS[business?.plan] || business?.plan || '—'}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2 }}>Facturación mensual</div>
+                  </div>
+                  <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontSize: 24, fontWeight: 700, color: 'var(--primary)' }}>
+                    {fmt(PLAN_PRICES[business?.plan] || 0)}<span style={{ fontSize: 13, fontWeight: 400, color: 'var(--text3)' }}>/mes</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Cancelar suscripción */}
+              {(subStatus === 'active' || subStatus === 'trial') && isAdmin && (
+                <div style={{ borderTop: '1px solid var(--border)', paddingTop: 20 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 6 }}>Cancelar suscripción</div>
+                  <p style={{ fontSize: 12, color: 'var(--text3)', lineHeight: 1.6, marginBottom: 14 }}>
+                    Si cancelás, tu acceso continuará hasta el próximo período de facturación. Después el sistema quedará suspendido y no se realizarán más cobros.
+                  </p>
+
+                  {!confirmCancel ? (
+                    <button className="btn btn-danger" onClick={() => setConfirmCancel(true)}>
+                      <XCircle size={14} /> Cancelar suscripción
+                    </button>
+                  ) : (
+                    <div style={{ background: '#fff1f1', border: '1px solid #fecaca', borderRadius: 12, padding: '16px' }}>
+                      <div style={{ display: 'flex', gap: 10, marginBottom: 14, alignItems: 'flex-start' }}>
+                        <AlertTriangle size={16} color="#dc2626" style={{ flexShrink: 0, marginTop: 2 }} />
+                        <div style={{ fontSize: 13, color: '#dc2626', fontWeight: 600 }}>
+                          ¿Estás seguro? Esta acción cancelará el débito automático mensual.
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 10 }}>
+                        <button className="btn btn-secondary btn-sm" onClick={() => setConfirmCancel(false)}>
+                          Volver
+                        </button>
+                        <button className="btn btn-danger btn-sm" disabled={cancelling} onClick={handleCancelSubscription}>
+                          {cancelling ? 'Cancelando...' : 'Sí, cancelar suscripción'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {subStatus === 'suspended' && (
+                <div style={{ borderTop: '1px solid var(--border)', paddingTop: 20, textAlign: 'center' }}>
+                  <p style={{ fontSize: 13, color: 'var(--text3)', marginBottom: 14 }}>Tu suscripción está suspendida. Reactivala para seguir usando el sistema.</p>
+                  <a href="https://api.whatsapp.com/send?phone=2604104160&text=Quiero reactivar mi suscripción de Genesys App"
+                    target="_blank" rel="noopener noreferrer"
+                    className="btn btn-primary" style={{ textDecoration: 'none' }}>
+                    <CreditCard size={14} /> Reactivar suscripción
+                  </a>
+                </div>
+              )}
             </div>
           </div>
         )}

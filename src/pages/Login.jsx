@@ -160,9 +160,9 @@ export default function Login() {
     <div className="login-page">
       <div className="login-card fade-up">
         <div className="login-logo">
-          <div className="logo-mark" style={{ margin: '0 auto 14px', width: 56, height: 56, fontSize: 30 }}>É</div>
-          <h1>ÉXODO</h1>
-          <p>Gestión de iPhones</p>
+          <div className="logo-mark" style={{ margin: '0 auto 14px', width: 56, height: 56, fontSize: 30 }}>G</div>
+          <h1>Genesys App</h1>
+          <p>Sistema de gestión</p>
         </div>
         <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div className="form-group">

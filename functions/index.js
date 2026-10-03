@@ -284,4 +284,43 @@ exports.getPaymentLink = onCall(async (request) => {
     plan: planKey,
     amount: PLANS[planKey].amount,
   };
+
+  // ── 8. Cancelar suscripción ────────────────────────────────────────────
+exports.cancelSubscription = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "No autenticado");
+
+  const userDoc = await db.collection("users").doc(uid).get();
+  if (!userDoc.exists) throw new HttpsError("not-found", "Usuario no encontrado");
+
+  const user = userDoc.data();
+  const bizDoc = await db.collection("businesses").doc(user.businessId).get();
+  if (!bizDoc.exists) throw new HttpsError("not-found", "Negocio no encontrado");
+
+  const biz = bizDoc.data();
+
+  if (!biz.mpSubscriptionId) {
+    throw new HttpsError("failed-precondition", "No hay suscripción activa");
+  }
+
+  try {
+    const mp = new MercadoPagoConfig({ accessToken: MP_ACCESS_TOKEN });
+    const preApproval = new PreApproval(mp);
+
+    await preApproval.update({
+      id: biz.mpSubscriptionId,
+      body: { status: "cancelled" },
+    });
+
+    await db.collection("businesses").doc(user.businessId).update({
+      status: "suspended",
+      mpStatus: "cancelled",
+      cancelledAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    return { success: true };
+  } catch (e) {
+    throw new HttpsError("internal", e.message);
+  }
+});
 });
