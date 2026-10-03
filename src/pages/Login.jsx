@@ -162,6 +162,7 @@ export default function Login() {
         <div className="login-logo">
          <div style={{ margin: '0 auto 14px', width: 72, height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <img src="/GenesysLogo.webp" alt="Genesys" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+            <h1>Genesys <span style={{ color: 'var(--primary)' }}>App</span></h1>
           </div>
         </div>
         <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
