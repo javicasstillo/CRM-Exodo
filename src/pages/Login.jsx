@@ -160,11 +160,14 @@ export default function Login() {
     <div className="login-page">
       <div className="login-card fade-up">
         <div className="login-logo">
-         <div style={{ margin: '0 auto 14px', width: 72, height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <img src="/GenesysLogo.webp" alt="Genesys" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-            <h1>Genesys <span style={{ color: 'var(--primary)' }}>App</span></h1>
-          </div>
-        </div>
+  <div style={{ margin: '0 auto 20px', width: 80, height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <img src="/GenesysLogo.webp" alt="Genesys" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+  </div>
+  <h1 style={{ fontFamily: 'Space Grotesk, sans-serif', fontSize: 24, fontWeight: 700, letterSpacing: -0.5, marginBottom: 6 }}>
+    Genesys <span style={{ color: 'var(--primary)' }}>App</span>
+  </h1>
+  <p style={{ fontSize: 13, color: 'var(--text3)' }}>Sistema de gestión</p>
+</div>
         <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div className="form-group">
             <label className="form-label">Email</label>
