@@ -679,3 +679,37 @@ textarea.form-input { resize: vertical; }
   text-align: left;
 }
 .dropdown-item:hover { background: var(--bg2); color: var(--text); }
+
+/* ══════════════════════════════════════
+   DASHBOARD MOBILE
+══════════════════════════════════════ */
+@media (max-width: 768px) {
+  /* KPIs — 2 columnas en mobile */
+  .page-body > div[style*="1.2fr 1fr 1fr 1fr"] {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  /* Últimas ventas + Stock — una columna */
+  .dashboard-cols {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Top modelos + Origen + Financiero — una columna */
+  .page-body > .dashboard-cols[style*="1fr 1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Page header — evitar solapamiento con hamburguesa */
+  .page-header {
+    padding: 60px 16px 0 !important;
+  }
+
+  .page-body {
+    padding: 16px 16px 40px !important;
+  }
+
+  /* Header fijo no tape contenido */
+  .main-content {
+    padding-top: 0;
+  }
+}
