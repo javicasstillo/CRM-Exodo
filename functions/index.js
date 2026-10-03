@@ -61,7 +61,7 @@ exports.registerBusiness = onRequest(async (req, res) => {
     const uid = userRecord.uid;
 
     const trialEnd = new Date();
-    trialEnd.setDate(trialEnd.getDate() + 14);
+    trialEnd.setDate(trialEnd.getDate() + 7);
 
     await db.collection('users').doc(uid).set({
       name: businessName, email, role: 'admin',
@@ -324,5 +324,58 @@ exports.cancelSubscription = onCall(async (request) => {
     return { success: true };
   } catch (e) {
     throw new HttpsError("internal", e.message);
+  }
+});
+
+// ── 9. Link de pago público (para registro sin trial) ─────────────────
+exports.createPaymentLinkPublic = onRequest(async (req, res) => {
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.set('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') { res.status(204).send(''); return; }
+  if (req.method !== 'POST') { res.status(405).send('Method not allowed'); return; }
+
+  const { email, plan = 'pyme' } = req.body;
+
+  if (!email) { res.status(400).json({ error: 'Falta el email' }); return; }
+
+  try {
+    // Buscar el negocio por email
+    const usersSnap = await db.collection('users').where('email', '==', email).limit(1).get();
+    if (usersSnap.empty) { res.status(404).json({ error: 'Usuario no encontrado' }); return; }
+
+    const user = usersSnap.docs[0].data();
+    const mp = new MercadoPagoConfig({ accessToken: MP_ACCESS_TOKEN });
+    const preApproval = new PreApproval(mp);
+    const planId = await getOrCreatePlan(plan);
+
+    const sub = await preApproval.create({
+      body: {
+        preapproval_plan_id: planId,
+        reason: PLANS[plan].name,
+        payer_email: email,
+        back_url: 'https://app.genesys.com.ar',
+        auto_recurring: {
+          frequency: 1,
+          frequency_type: 'months',
+          transaction_amount: PLANS[plan].amount,
+          currency_id: 'ARS',
+        },
+        status: 'pending',
+      },
+    });
+
+    // Actualizar el negocio con la suscripción
+    await db.collection('businesses').doc(user.businessId).update({
+      mpSubscriptionId: sub.id,
+      mpPlanKey: plan,
+      status: 'pending_payment',
+    });
+
+    res.status(200).json({ initPoint: sub.init_point });
+  } catch (e) {
+    console.error('createPaymentLinkPublic error:', e);
+    res.status(500).json({ error: e.message });
   }
 });
