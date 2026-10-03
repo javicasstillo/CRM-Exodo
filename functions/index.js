@@ -1,4 +1,5 @@
 const { onRequest, onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
 const admin = require("firebase-admin");
 const { MercadoPagoConfig, PreApproval, PreApprovalPlan } = require("mercadopago");
 
@@ -80,7 +81,7 @@ exports.registerBusiness = onRequest(async (req, res) => {
   }
 });
 
-// ── 2. Crear suscripción en MP (genera link de pago) ──────────────────
+// ── 2. Crear suscripción en MP ─────────────────────────────────────────
 exports.createSubscription = onCall(async (request) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "Debés estar logueado");
@@ -97,7 +98,6 @@ exports.createSubscription = onCall(async (request) => {
 
   const mp = new MercadoPagoConfig({ accessToken: MP_ACCESS_TOKEN });
   const preApproval = new PreApproval(mp);
-
   const planId = await getOrCreatePlan(planKey);
 
   const sub = await preApproval.create({
@@ -167,7 +167,7 @@ exports.mpWebhook = onRequest(async (req, res) => {
   }
 });
 
-// ── 4. Chequear trials expirados ───────────────────────────────────────
+// ── 4. Chequear trials expirados manualmente ───────────────────────────
 exports.checkTrials = onRequest(async (req, res) => {
   const now = new Date();
 
@@ -183,7 +183,20 @@ exports.checkTrials = onRequest(async (req, res) => {
   res.status(200).json({ suspended: snap.size });
 });
 
-// ── 5. Estado del negocio ──────────────────────────────────────────────
+// ── 5. Chequear trials expirados automáticamente (cron diario) ────────
+exports.checkTrialsScheduled = onSchedule("every 24 hours", async () => {
+  const now = new Date();
+  const snap = await db.collection("businesses")
+    .where("status", "==", "trial")
+    .where("trialEnd", "<=", now)
+    .get();
+  const batch = db.batch();
+  snap.docs.forEach(doc => batch.update(doc.ref, { status: "suspended" }));
+  await batch.commit();
+  console.log(`Trials vencidos suspendidos: ${snap.size}`);
+});
+
+// ── 6. Estado del negocio ──────────────────────────────────────────────
 exports.getBusinessStatus = onCall(async (request) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "No autenticado");
@@ -211,7 +224,7 @@ exports.getBusinessStatus = onCall(async (request) => {
   };
 });
 
-// ── 6. Generar link de pago cuando vence el trial ─────────────────────
+// ── 7. Generar link de pago cuando vence el trial ─────────────────────
 exports.getPaymentLink = onCall(async (request) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "No autenticado");
