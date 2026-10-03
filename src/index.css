@@ -164,9 +164,11 @@ body {
   }
   .sidebar.open { left: 0; }
   .sidebar-overlay {
-    display: block; position: fixed; inset: 0;
-    background: rgba(0,0,0,0.5); z-index: 99;
-  }
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.5); z-index: 99;
+}
+.sidebar-overlay.open { display: block; }
   .sidebar-overlay.open { display: block; }
 
   .page-header { padding: 52px 16px 0; flex-wrap: wrap; gap: 10px; }
