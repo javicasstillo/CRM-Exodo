@@ -13,6 +13,7 @@ import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import { ToastProvider } from './context/ToastContext';
 import { AppProvider, useApp } from './context/AppContext';
+import SubscriptionGate from './components/SubscriptionGate';
 import { Menu } from 'lucide-react';
 
 const PAGE_TITLES = {
@@ -110,16 +111,18 @@ function AppShell({ user }) {
         onToggleDark={() => setDarkMode(d => !d)}
       />
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <Header
           profile={profile}
           business={business}
           onNavigate={handleNavigate}
           onLogout={logout}
         />
-        <main className="main-content" style={{ flex: 1 }}>
-          {pageLoading ? <Skeleton /> : <PageComponent />}
-        </main>
+        <SubscriptionGate>
+          <main className="main-content" style={{ flex: 1 }}>
+            {pageLoading ? <Skeleton /> : <PageComponent />}
+          </main>
+        </SubscriptionGate>
       </div>
     </div>
   );

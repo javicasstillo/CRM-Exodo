@@ -1,14 +1,17 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { getUserProfile, getBusinessConfig, saveBusinessConfig } from '../firebase';
 import { setBusinessId } from '../api';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 
 const AppContext = createContext(null);
 export const useApp = () => useContext(AppContext);
 
 export function AppProvider({ user, children }) {
-  const [profile, setProfile]   = useState(null);
-  const [business, setBusiness] = useState(null);
-  const [loading, setLoading]   = useState(true);
+  const [profile, setProfile]       = useState(null);
+  const [business, setBusiness]     = useState(null);
+  const [loading, setLoading]       = useState(true);
+  const [subStatus, setSubStatus]   = useState(null); // trial | active | suspended | pending_payment
+  const [trialDays, setTrialDays]   = useState(null);
 
   useEffect(() => {
     if (!user) { setLoading(false); return; }
@@ -20,9 +23,8 @@ export function AppProvider({ user, children }) {
     try {
       let prof = await getUserProfile(user.uid);
 
-      // Si no existe el perfil (primer admin), lo creamos automáticamente
       if (!prof) {
-        const businessId = user.uid; // el primer usuario ES el negocio
+        const businessId = user.uid;
         prof = {
           id: user.uid,
           name: user.displayName || user.email.split('@')[0],
@@ -31,12 +33,9 @@ export function AppProvider({ user, children }) {
           businessId,
           active: true,
         };
-        // Guardar perfil
         const { setDoc, doc, serverTimestamp } = await import('firebase/firestore');
         const { db } = await import('../firebase');
         await setDoc(doc(db, 'users', user.uid), { ...prof, createdAt: serverTimestamp() });
-
-        // Crear configuración del negocio
         await saveBusinessConfig(businessId, {
           name: 'Mi Negocio',
           logo: null,
@@ -45,6 +44,7 @@ export function AppProvider({ user, children }) {
           phone: '',
           address: '',
           primaryColor: '#0d6efd',
+          status: 'trial',
         });
       }
 
@@ -53,6 +53,20 @@ export function AppProvider({ user, children }) {
 
       const biz = await getBusinessConfig(prof.businessId);
       setBusiness(biz);
+
+      // Verificar estado de suscripción via Cloud Function
+      try {
+        const functions = getFunctions(undefined, 'us-central1');
+        const getStatus = httpsCallable(functions, 'getBusinessStatus');
+        const result = await getStatus();
+        setSubStatus(result.data.status);
+        setTrialDays(result.data.trialDaysLeft);
+      } catch (e) {
+        // Si falla la función, leemos el estado directo de Firestore como fallback
+        setSubStatus(biz?.status || 'trial');
+        setTrialDays(null);
+      }
+
     } catch (e) {
       console.error('Error cargando perfil:', e);
     } finally {
@@ -73,7 +87,11 @@ export function AppProvider({ user, children }) {
   };
 
   return (
-    <AppContext.Provider value={{ profile, business, loading, refreshBusiness, refreshProfile }}>
+    <AppContext.Provider value={{
+      profile, business, loading,
+      subStatus, trialDays,
+      refreshBusiness, refreshProfile,
+    }}>
       {children}
     </AppContext.Provider>
   );
