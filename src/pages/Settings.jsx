@@ -235,45 +235,98 @@ export default function Settings() {
 
   // ── Vista reducida para vendedor y viewer ──
   if (!isAdmin) return (
-    <>
-      <div className="page-header">
-        <div><h2>Mi perfil</h2><p>Editá tu información personal</p></div>
+  <>
+    <div className="page-header">
+      <div><h2>Mi perfil</h2><p>Editá tu información personal</p></div>
+    </div>
+    <div className="page-body fade-up">
+
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 24, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: 4, width: 'fit-content' }}>
+        {[{ id: 'perfil', label: 'Mi perfil', icon: Users }, { id: 'catalogo', label: 'Catálogo', icon: Globe }].map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)}
+            style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, transition: 'all 0.15s', background: tab === t.id ? 'var(--primary)' : 'none', color: tab === t.id ? '#fff' : 'var(--text2)' }}>
+            <t.icon size={14} /> {t.label}
+          </button>
+        ))}
       </div>
-      <div className="page-body fade-up" style={{ maxWidth: 500 }}>
-        <div className="card">
-          <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 18 }}>Mi perfil</h3>
-          {profForm && (
-            <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
-                <AvatarUploader value={profForm.photo} onChange={v => setProfForm(f => ({ ...f, photo: v }))} size={68} />
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 600 }}>{profForm.name}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>{profForm.email}</div>
-                  <div style={{ marginTop: 6 }}>
-                    <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: ROLE_COLORS[profile?.role] + '20', color: ROLE_COLORS[profile?.role], textTransform: 'uppercase' }}>
-                      {ROLE_LABELS[profile?.role]}
-                    </span>
-                  </div>
+
+      {/* Perfil */}
+      {tab === 'perfil' && profForm && (
+        <div style={{ maxWidth: 500 }}>
+          <div className="card">
+            <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 18 }}>Mi perfil</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
+              <AvatarUploader value={profForm.photo} onChange={v => setProfForm(f => ({ ...f, photo: v }))} size={68} />
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600 }}>{profForm.name}</div>
+                <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>{profForm.email}</div>
+                <div style={{ marginTop: 6 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: ROLE_COLORS[profile?.role] + '20', color: ROLE_COLORS[profile?.role], textTransform: 'uppercase' }}>
+                    {ROLE_LABELS[profile?.role]}
+                  </span>
                 </div>
               </div>
-              <div className="form-group">
-                <label className="form-label">Nombre completo</label>
-                <input className="form-input" value={profForm.name || ''} onChange={e => setProfForm(f => ({ ...f, name: e.target.value }))} />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Email</label>
-                <input className="form-input" value={profForm.email || ''} disabled style={{ opacity: 0.6, cursor: 'not-allowed' }} />
-                <span style={{ fontSize: 11, color: 'var(--text3)', marginTop: 3, display: 'block' }}>El email no se puede cambiar</span>
-              </div>
-              <button className="btn btn-primary" disabled={saving} onClick={saveProfile}>
-                <Save size={14} /> {saving ? 'Guardando...' : 'Guardar perfil'}
-              </button>
-            </>
-          )}
+            </div>
+            <div className="form-group">
+              <label className="form-label">Nombre completo</label>
+              <input className="form-input" value={profForm.name || ''} onChange={e => setProfForm(f => ({ ...f, name: e.target.value }))} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Email</label>
+              <input className="form-input" value={profForm.email || ''} disabled style={{ opacity: 0.6, cursor: 'not-allowed' }} />
+              <span style={{ fontSize: 11, color: 'var(--text3)', marginTop: 3, display: 'block' }}>El email no se puede cambiar</span>
+            </div>
+            <button className="btn btn-primary" disabled={saving} onClick={saveProfile}>
+              <Save size={14} /> {saving ? 'Guardando...' : 'Guardar perfil'}
+            </button>
+          </div>
         </div>
-      </div>
-    </>
-  );
+      )}
+
+      {/* Catálogo — solo lectura para vendedor */}
+      {tab === 'catalogo' && (
+        <div style={{ maxWidth: 560 }}>
+          <div className="card">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+              <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--primary-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Globe size={20} color="var(--primary)" />
+              </div>
+              <div>
+                <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>Catálogo público</h3>
+                <p style={{ fontSize: 12, color: 'var(--text3)', margin: 0, marginTop: 2 }}>Compartí el catálogo con tus clientes</p>
+              </div>
+            </div>
+            {catalogSlug ? (
+              <>
+                <div style={{ background: 'var(--bg2)', borderRadius: 12, padding: '14px 16px', marginBottom: 16 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 8 }}>Link público</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--primary)', wordBreak: 'break-all' }}>{catalogUrl}</div>
+                    <button className="btn btn-sm btn-secondary" onClick={copyCatalogUrl} style={{ flexShrink: 0 }}>
+                      {copiedCatalog ? <Check size={13} /> : <Copy size={13} />}
+                    </button>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <a href={catalogUrl} target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ flex: 1, justifyContent: 'center', textDecoration: 'none' }}>
+                    <ExternalLink size={14} /> Ver catálogo
+                  </a>
+                  <button className="btn btn-secondary" onClick={shareCatalogWA} style={{ flex: 1, justifyContent: 'center' }}>
+                    <Share2 size={14} /> Compartir por WhatsApp
+                  </button>
+                </div>
+              </>
+            ) : (
+              <p style={{ fontSize: 13, color: 'var(--text3)', textAlign: 'center', padding: '20px 0' }}>El catálogo todavía no está configurado.</p>
+            )}
+          </div>
+        </div>
+      )}
+
+    </div>
+  </>
+);
 
   // ── Vista completa para admin ──
   const TABS = [
