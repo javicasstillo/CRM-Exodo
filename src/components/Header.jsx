@@ -38,9 +38,9 @@ export default function Header({ profile, business, onNavigate, onLogout }) {
       </div>
 
       {/* Alertas de stock — oculto en mobile via CSS */}
-      {lowStock.length > 0 && (
-        <button
-          className="stock-alert-btn"
+      {lowStock.length > 0 && business?.plan !== 'emprendedor' && (
+  <button
+    className="stock-alert-btn"
           onClick={() => onNavigate('phones')}
           style={{
             display: 'flex', alignItems: 'center', gap: 7,

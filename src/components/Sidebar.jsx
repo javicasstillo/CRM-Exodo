@@ -102,7 +102,7 @@ export default function Sidebar({ page, onNavigate, onLogout, className = '', bu
             <button key={id} className={`nav-item ${page === id ? 'active' : ''}`} onClick={() => onNavigate(id)}>
               <Icon size={16} />
               {label}
-              {id === 'phones' && alertCount > 0 && (
+              {id === 'phones' && alertCount > 0 && business?.plan !== 'emprendedor' && (
                 <span style={{ marginLeft: 'auto', background: '#ef4444', color: '#fff', fontSize: 10, fontWeight: 700, borderRadius: 20, padding: '1px 6px', minWidth: 18, textAlign: 'center' }}>
                   {alertCount}
                 </span>
