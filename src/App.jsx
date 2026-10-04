@@ -150,6 +150,11 @@ export default function App() {
     return <Catalog />;
   }
 
+  // ── Ruta pública de invitaciones ──
+if (window.location.pathname.startsWith('/invite/')) {
+  return <ToastProvider><Login /></ToastProvider>;
+}
+
   if (user === undefined) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', flexDirection: 'column', gap: 16, background: 'var(--bg)' }}>
       <div className="skeleton" style={{ width: 48, height: 48, borderRadius: 12 }} />
