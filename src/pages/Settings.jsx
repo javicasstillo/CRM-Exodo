@@ -12,6 +12,11 @@ const ROLE_COLORS = { admin: '#0d6efd', vendedor: '#16a34a', viewer: '#d97706' }
 const PLAN_LABELS = { emprendedor: 'Pequeño Emprendedor', pyme: 'Pyme', empresa: 'Empresa' };
 const PLAN_PRICES = { emprendedor: 20000, pyme: 35000, empresa: 60000 };
 const fmt = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(n || 0);
+const PLAN_LIMITS = {
+  emprendedor: { maxUsers: 1 },
+  pyme:        { maxUsers: 3 },
+  empresa:     { maxUsers: 999 },
+};
 
 function AvatarUploader({ value, onChange, size = 80 }) {
   const ref = useRef();
@@ -201,6 +206,10 @@ export default function Settings() {
 
   const isAdmin = profile?.role === 'admin';
 
+  const plan = business?.plan || 'emprendedor';
+  const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.emprendedor;
+  const canInvite = users.filter(u => u.active !== false).length < limits.maxUsers;
+
   const STATUS_INFO = {
     trial:           { label: 'Período de prueba', color: '#d97706', bg: '#fffbeb', icon: <Clock size={16} /> },
     active:          { label: 'Activa',             color: '#16a34a', bg: '#f0fdf4', icon: <CheckCircle size={16} /> },
@@ -334,10 +343,21 @@ export default function Settings() {
                 <p style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2 }}>{users.length} usuario{users.length !== 1 ? 's' : ''} registrado{users.length !== 1 ? 's' : ''}</p>
               </div>
               {isAdmin && (
-                <button className="btn btn-primary" onClick={() => setInviteModal(true)}>
-                  <Plus size={14} /> Invitar usuario
-                </button>
-              )}
+  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+    <button
+      className="btn btn-primary"
+      onClick={() => canInvite ? setInviteModal(true) : toast(`Tu plan ${PLAN_LABELS[plan]} permite máximo ${limits.maxUsers} usuario${limits.maxUsers !== 1 ? 's' : ''}. Actualizá tu plan para agregar más.`, 'warning')}
+      style={{ opacity: canInvite ? 1 : 0.7 }}>
+      <Plus size={14} /> Invitar usuario
+      {!canInvite && <span style={{ fontSize: 10, marginLeft: 4, background: '#d97706', color: '#fff', padding: '1px 6px', borderRadius: 10 }}>Límite</span>}
+    </button>
+    {!canInvite && (
+      <span style={{ fontSize: 11, color: 'var(--text3)' }}>
+        {users.filter(u => u.active !== false).length}/{limits.maxUsers} usuarios en tu plan
+      </span>
+    )}
+  </div>
+)}
             </div>
             <div className="table-wrap">
               <table>

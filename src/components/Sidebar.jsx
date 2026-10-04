@@ -134,8 +134,8 @@ export default function Sidebar({ page, onNavigate, onLogout, className = '', bu
           )}
         </nav>
 
-        {/* Alertas stock bajo */}
-        {alertCount > 0 && (
+        {/* Alertas stock bajo — solo Pyme y Empresa */}
+      {alertCount > 0 && !['emprendedor'].includes(business?.plan) && (
           <div style={{ margin: '0 12px 10px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, padding: '10px 12px' }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: '#f87171', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 5 }}>
               <Bell size={11} /> Stock bajo ({alertCount})
