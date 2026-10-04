@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { saveBusinessConfig, updateUserProfile, createInvitation } from '../firebase';
 import { useToast } from '../context/ToastContext';
-import { Building2, Users, Plus, Camera, Save, X, Shield, Trash2, Copy, Check, Mail, Clock, CreditCard, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
+import { Building2, Users, Plus, Camera, Save, X, Shield, Trash2, Copy, Check, Mail, Clock, CreditCard, AlertTriangle, CheckCircle, XCircle, Globe, ExternalLink, Share2 } from 'lucide-react';
 import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { getFunctions, httpsCallable } from 'firebase/functions';
@@ -149,6 +149,7 @@ export default function Settings() {
   const [cancelling, setCancelling] = useState(false);
   const [inviteModal, setInviteModal] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [copiedCatalog, setCopiedCatalog] = useState(false);
 
   useEffect(() => {
     if (business) setBizForm({ ...business });
@@ -205,10 +206,26 @@ export default function Settings() {
   };
 
   const isAdmin = profile?.role === 'admin';
-
   const plan = business?.plan || 'emprendedor';
   const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.emprendedor;
   const canInvite = users.filter(u => u.active !== false).length < limits.maxUsers;
+
+  // Catálogo
+  const catalogSlug = business?.slug || '';
+  const catalogUrl = catalogSlug ? `${window.location.origin}/catalogo/${catalogSlug}` : '';
+
+  const copyCatalogUrl = () => {
+    if (!catalogUrl) return;
+    navigator.clipboard.writeText(catalogUrl);
+    setCopiedCatalog(true);
+    setTimeout(() => setCopiedCatalog(false), 2000);
+    toast('Link del catálogo copiado', 'success');
+  };
+
+  const shareCatalogWA = () => {
+    const msg = encodeURIComponent(`¡Mirá nuestro catálogo online! 👉 ${catalogUrl}`);
+    window.open(`https://api.whatsapp.com/send?text=${msg}`, '_blank');
+  };
 
   const STATUS_INFO = {
     trial:           { label: 'Período de prueba', color: '#d97706', bg: '#fffbeb', icon: <Clock size={16} /> },
@@ -218,10 +235,11 @@ export default function Settings() {
   };
 
   const TABS = [
-    { id: 'negocio',      label: 'Negocio',       icon: Building2  },
-    { id: 'perfil',       label: 'Mi perfil',     icon: Users      },
-    { id: 'usuarios',     label: 'Usuarios',      icon: Shield     },
-    { id: 'suscripcion',  label: 'Suscripción',   icon: CreditCard },
+    { id: 'negocio',     label: 'Negocio',    icon: Building2 },
+    { id: 'perfil',      label: 'Mi perfil',  icon: Users     },
+    { id: 'usuarios',    label: 'Usuarios',   icon: Shield    },
+    { id: 'catalogo',    label: 'Catálogo',   icon: Globe     },
+    { id: 'suscripcion', label: 'Suscripción',icon: CreditCard},
   ];
 
   return (
@@ -343,21 +361,21 @@ export default function Settings() {
                 <p style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2 }}>{users.length} usuario{users.length !== 1 ? 's' : ''} registrado{users.length !== 1 ? 's' : ''}</p>
               </div>
               {isAdmin && (
-  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-    <button
-      className="btn btn-primary"
-      onClick={() => canInvite ? setInviteModal(true) : toast(`Tu plan ${PLAN_LABELS[plan]} permite máximo ${limits.maxUsers} usuario${limits.maxUsers !== 1 ? 's' : ''}. Actualizá tu plan para agregar más.`, 'warning')}
-      style={{ opacity: canInvite ? 1 : 0.7 }}>
-      <Plus size={14} /> Invitar usuario
-      {!canInvite && <span style={{ fontSize: 10, marginLeft: 4, background: '#d97706', color: '#fff', padding: '1px 6px', borderRadius: 10 }}>Límite</span>}
-    </button>
-    {!canInvite && (
-      <span style={{ fontSize: 11, color: 'var(--text3)' }}>
-        {users.filter(u => u.active !== false).length}/{limits.maxUsers} usuarios en tu plan
-      </span>
-    )}
-  </div>
-)}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => canInvite ? setInviteModal(true) : toast(`Tu plan ${PLAN_LABELS[plan]} permite máximo ${limits.maxUsers} usuario${limits.maxUsers !== 1 ? 's' : ''}. Actualizá tu plan para agregar más.`, 'warning')}
+                    style={{ opacity: canInvite ? 1 : 0.7 }}>
+                    <Plus size={14} /> Invitar usuario
+                    {!canInvite && <span style={{ fontSize: 10, marginLeft: 4, background: '#d97706', color: '#fff', padding: '1px 6px', borderRadius: 10 }}>Límite</span>}
+                  </button>
+                  {!canInvite && (
+                    <span style={{ fontSize: 11, color: 'var(--text3)' }}>
+                      {users.filter(u => u.active !== false).length}/{limits.maxUsers} usuarios en tu plan
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
             <div className="table-wrap">
               <table>
@@ -414,13 +432,125 @@ export default function Settings() {
           </div>
         )}
 
+        {/* TAB: Catálogo */}
+        {tab === 'catalogo' && (
+          <div style={{ maxWidth: 560 }}>
+            <div className="card">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--primary-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Globe size={20} color="var(--primary)" />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>Catálogo público</h3>
+                  <p style={{ fontSize: 12, color: 'var(--text3)', margin: 0, marginTop: 2 }}>Compartí tu stock online con tus clientes</p>
+                </div>
+              </div>
+
+              {catalogSlug ? (
+                <>
+                  {/* Link del catálogo */}
+                  <div style={{ background: 'var(--bg2)', borderRadius: 12, padding: '14px 16px', marginBottom: 16 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 8 }}>Tu link público</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--primary)', wordBreak: 'break-all' }}>{catalogUrl}</div>
+                      <button className="btn btn-sm btn-secondary" onClick={copyCatalogUrl} style={{ flexShrink: 0 }}>
+                        {copiedCatalog ? <Check size={13} /> : <Copy size={13} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Acciones */}
+                  <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+                    <a href={catalogUrl} target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ flex: 1, justifyContent: 'center', textDecoration: 'none' }}>
+                      <ExternalLink size={14} /> Ver catálogo
+                    </a>
+                    <button className="btn btn-secondary" onClick={shareCatalogWA} style={{ flex: 1, justifyContent: 'center' }}>
+                      <Share2 size={14} /> Compartir por WhatsApp
+                    </button>
+                  </div>
+
+                  {/* Info */}
+                  <div style={{ background: 'var(--primary-bg)', border: '1px solid rgba(13,110,253,0.15)', borderRadius: 12, padding: '14px 16px' }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--primary)', marginBottom: 10 }}>¿Cómo funciona?</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {[
+                        'Los productos disponibles en Stock aparecen automáticamente en el catálogo',
+                        'Cuando vendés un producto en Genesys, desaparece del catálogo',
+                        'Tus clientes pueden consultar por WhatsApp directamente desde el catálogo',
+                        'El catálogo usa el número de WhatsApp que configuraste en Negocio',
+                      ].map((t, i) => (
+                        <div key={i} style={{ display: 'flex', gap: 8, fontSize: 12, color: 'var(--text2)' }}>
+                          <span style={{ color: 'var(--primary)', fontWeight: 700, flexShrink: 0 }}>✓</span>
+                          <span>{t}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Personalizar slug */}
+                  {isAdmin && bizForm && (
+                    <div style={{ marginTop: 20, borderTop: '1px solid var(--border)', paddingTop: 20 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Personalizar URL del catálogo</div>
+                      <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
+                        <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                          <label className="form-label">Identificador único</label>
+                          <div style={{ display: 'flex', alignItems: 'center', border: '1.5px solid var(--border2)', borderRadius: 10, overflow: 'hidden' }}>
+                            <span style={{ padding: '9px 12px', background: 'var(--bg3)', fontSize: 12, color: 'var(--text3)', borderRight: '1px solid var(--border2)', whiteSpace: 'nowrap' }}>
+                              /catalogo/
+                            </span>
+                            <input
+                              style={{ flex: 1, padding: '9px 12px', border: 'none', outline: 'none', fontSize: 13, background: 'var(--bg-card)', color: 'var(--text)' }}
+                              value={bizForm.slug || ''}
+                              onChange={e => setBizForm(f => ({ ...f, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') }))}
+                              placeholder="mi-tienda"
+                            />
+                          </div>
+                          <span style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4, display: 'block' }}>Solo letras, números y guiones</span>
+                        </div>
+                        <button className="btn btn-primary" disabled={saving} onClick={saveBusiness}>
+                          <Save size={14} /> {saving ? 'Guardando...' : 'Guardar'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                /* Sin slug configurado */
+                <div style={{ textAlign: 'center', padding: '32px 0' }}>
+                  <div style={{ fontSize: 48, marginBottom: 12 }}>🔗</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>Activá tu catálogo</div>
+                  <p style={{ fontSize: 13, color: 'var(--text3)', marginBottom: 20 }}>Elegí un identificador para la URL de tu catálogo.</p>
+                  {isAdmin && bizForm && (
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', maxWidth: 360, margin: '0 auto' }}>
+                      <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', border: '1.5px solid var(--border2)', borderRadius: 10, overflow: 'hidden' }}>
+                          <span style={{ padding: '9px 12px', background: 'var(--bg3)', fontSize: 12, color: 'var(--text3)', borderRight: '1px solid var(--border2)', whiteSpace: 'nowrap' }}>/catalogo/</span>
+                          <input
+                            style={{ flex: 1, padding: '9px 12px', border: 'none', outline: 'none', fontSize: 13, background: 'var(--bg-card)', color: 'var(--text)' }}
+                            value={bizForm.slug || ''}
+                            onChange={e => setBizForm(f => ({ ...f, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') }))}
+                            placeholder="mi-tienda"
+                            autoFocus
+                          />
+                        </div>
+                      </div>
+                      <button className="btn btn-primary" disabled={saving || !bizForm.slug} onClick={saveBusiness}>
+                        <Save size={14} /> Activar
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* TAB: Suscripción */}
         {tab === 'suscripcion' && (
           <div style={{ maxWidth: 560 }}>
             <div className="card">
               <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 18 }}>Mi suscripción</h3>
 
-              {/* Estado actual */}
               {(() => {
                 const info = STATUS_INFO[subStatus] || STATUS_INFO.trial;
                 return (
@@ -441,7 +571,6 @@ export default function Settings() {
                 );
               })()}
 
-              {/* Plan actual */}
               <div style={{ background: 'var(--bg2)', borderRadius: 12, padding: '16px 18px', marginBottom: 20 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 10 }}>Plan actual</div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -455,14 +584,12 @@ export default function Settings() {
                 </div>
               </div>
 
-              {/* Cancelar suscripción */}
               {(subStatus === 'active' || subStatus === 'trial') && isAdmin && (
                 <div style={{ borderTop: '1px solid var(--border)', paddingTop: 20 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 6 }}>Cancelar suscripción</div>
                   <p style={{ fontSize: 12, color: 'var(--text3)', lineHeight: 1.6, marginBottom: 14 }}>
                     Si cancelás, tu acceso continuará hasta el próximo período de facturación. Después el sistema quedará suspendido y no se realizarán más cobros.
                   </p>
-
                   {!confirmCancel ? (
                     <button className="btn btn-danger" onClick={() => setConfirmCancel(true)}>
                       <XCircle size={14} /> Cancelar suscripción
@@ -471,14 +598,10 @@ export default function Settings() {
                     <div style={{ background: '#fff1f1', border: '1px solid #fecaca', borderRadius: 12, padding: '16px' }}>
                       <div style={{ display: 'flex', gap: 10, marginBottom: 14, alignItems: 'flex-start' }}>
                         <AlertTriangle size={16} color="#dc2626" style={{ flexShrink: 0, marginTop: 2 }} />
-                        <div style={{ fontSize: 13, color: '#dc2626', fontWeight: 600 }}>
-                          ¿Estás seguro? Esta acción cancelará el débito automático mensual.
-                        </div>
+                        <div style={{ fontSize: 13, color: '#dc2626', fontWeight: 600 }}>¿Estás seguro? Esta acción cancelará el débito automático mensual.</div>
                       </div>
                       <div style={{ display: 'flex', gap: 10 }}>
-                        <button className="btn btn-secondary btn-sm" onClick={() => setConfirmCancel(false)}>
-                          Volver
-                        </button>
+                        <button className="btn btn-secondary btn-sm" onClick={() => setConfirmCancel(false)}>Volver</button>
                         <button className="btn btn-danger btn-sm" disabled={cancelling} onClick={handleCancelSubscription}>
                           {cancelling ? 'Cancelando...' : 'Sí, cancelar suscripción'}
                         </button>
@@ -492,8 +615,7 @@ export default function Settings() {
                 <div style={{ borderTop: '1px solid var(--border)', paddingTop: 20, textAlign: 'center' }}>
                   <p style={{ fontSize: 13, color: 'var(--text3)', marginBottom: 14 }}>Tu suscripción está suspendida. Reactivala para seguir usando el sistema.</p>
                   <a href="https://api.whatsapp.com/send?phone=2604104160&text=Quiero reactivar mi suscripción de Genesys App"
-                    target="_blank" rel="noopener noreferrer"
-                    className="btn btn-primary" style={{ textDecoration: 'none' }}>
+                    target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ textDecoration: 'none' }}>
                     <CreditCard size={14} /> Reactivar suscripción
                   </a>
                 </div>
@@ -504,11 +626,7 @@ export default function Settings() {
 
       </div>
       {inviteModal && (
-        <InviteModal
-          profile={profile}
-          business={business}
-          onClose={() => setInviteModal(false)}
-        />
+        <InviteModal profile={profile} business={business} onClose={() => setInviteModal(false)} />
       )}
     </>
   );
