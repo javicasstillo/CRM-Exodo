@@ -141,7 +141,7 @@ function InviteModal({ profile, business, onClose }) {
 export default function Settings() {
   const { profile, business, refreshBusiness, refreshProfile, subStatus, trialDays } = useApp();
   const toast = useToast();
-  const [tab, setTab] = useState('negocio');
+  const [tab, setTab] = useState('perfil');
   const [bizForm, setBizForm] = useState(null);
   const [profForm, setProfForm] = useState(null);
   const [users, setUsers] = useState([]);
@@ -210,7 +210,6 @@ export default function Settings() {
   const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.emprendedor;
   const canInvite = users.filter(u => u.active !== false).length < limits.maxUsers;
 
-  // Catálogo
   const catalogSlug = business?.slug || '';
   const catalogUrl = catalogSlug ? `${window.location.origin}/catalogo/${catalogSlug}` : '';
 
@@ -234,12 +233,55 @@ export default function Settings() {
     pending_payment: { label: 'Pago pendiente',     color: '#0d6efd', bg: 'var(--primary-bg)', icon: <CreditCard size={16} /> },
   };
 
+  // ── Vista reducida para vendedor y viewer ──
+  if (!isAdmin) return (
+    <>
+      <div className="page-header">
+        <div><h2>Mi perfil</h2><p>Editá tu información personal</p></div>
+      </div>
+      <div className="page-body fade-up" style={{ maxWidth: 500 }}>
+        <div className="card">
+          <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 18 }}>Mi perfil</h3>
+          {profForm && (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
+                <AvatarUploader value={profForm.photo} onChange={v => setProfForm(f => ({ ...f, photo: v }))} size={68} />
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>{profForm.name}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>{profForm.email}</div>
+                  <div style={{ marginTop: 6 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: ROLE_COLORS[profile?.role] + '20', color: ROLE_COLORS[profile?.role], textTransform: 'uppercase' }}>
+                      {ROLE_LABELS[profile?.role]}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Nombre completo</label>
+                <input className="form-input" value={profForm.name || ''} onChange={e => setProfForm(f => ({ ...f, name: e.target.value }))} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Email</label>
+                <input className="form-input" value={profForm.email || ''} disabled style={{ opacity: 0.6, cursor: 'not-allowed' }} />
+                <span style={{ fontSize: 11, color: 'var(--text3)', marginTop: 3, display: 'block' }}>El email no se puede cambiar</span>
+              </div>
+              <button className="btn btn-primary" disabled={saving} onClick={saveProfile}>
+                <Save size={14} /> {saving ? 'Guardando...' : 'Guardar perfil'}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </>
+  );
+
+  // ── Vista completa para admin ──
   const TABS = [
-    { id: 'negocio',     label: 'Negocio',    icon: Building2 },
-    { id: 'perfil',      label: 'Mi perfil',  icon: Users     },
-    { id: 'usuarios',    label: 'Usuarios',   icon: Shield    },
-    { id: 'catalogo',    label: 'Catálogo',   icon: Globe     },
-    { id: 'suscripcion', label: 'Suscripción',icon: CreditCard},
+    { id: 'negocio',     label: 'Negocio',     icon: Building2  },
+    { id: 'perfil',      label: 'Mi perfil',   icon: Users      },
+    { id: 'usuarios',    label: 'Usuarios',    icon: Shield     },
+    { id: 'catalogo',    label: 'Catálogo',    icon: Globe      },
+    { id: 'suscripcion', label: 'Suscripción', icon: CreditCard },
   ];
 
   return (
@@ -292,7 +334,7 @@ export default function Settings() {
                 <label className="form-label">Dirección</label>
                 <input className="form-input" placeholder="Calle 123, Ciudad" value={bizForm.address || ''} onChange={e => setBizForm(f => ({ ...f, address: e.target.value }))} />
               </div>
-              <button className="btn btn-primary" disabled={saving || !isAdmin} onClick={saveBusiness} style={{ marginTop: 4 }}>
+              <button className="btn btn-primary" disabled={saving} onClick={saveBusiness} style={{ marginTop: 4 }}>
                 <Save size={14} /> {saving ? 'Guardando...' : 'Guardar cambios'}
               </button>
             </div>
@@ -312,7 +354,7 @@ export default function Settings() {
                 <label className="form-label">WhatsApp para ventas</label>
                 <input className="form-input" placeholder="+5492615551234" value={bizForm.whatsapp || ''} onChange={e => setBizForm(f => ({ ...f, whatsapp: e.target.value }))} />
               </div>
-              <button className="btn btn-primary" disabled={saving || !isAdmin} onClick={saveBusiness} style={{ marginTop: 4 }}>
+              <button className="btn btn-primary" disabled={saving} onClick={saveBusiness} style={{ marginTop: 4 }}>
                 <Save size={14} /> {saving ? 'Guardando...' : 'Guardar cambios'}
               </button>
             </div>
@@ -360,22 +402,20 @@ export default function Settings() {
                 <h3 style={{ fontSize: 15, fontWeight: 700 }}>Usuarios del sistema</h3>
                 <p style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2 }}>{users.length} usuario{users.length !== 1 ? 's' : ''} registrado{users.length !== 1 ? 's' : ''}</p>
               </div>
-              {isAdmin && (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-                  <button
-                    className="btn btn-primary"
-                    onClick={() => canInvite ? setInviteModal(true) : toast(`Tu plan ${PLAN_LABELS[plan]} permite máximo ${limits.maxUsers} usuario${limits.maxUsers !== 1 ? 's' : ''}. Actualizá tu plan para agregar más.`, 'warning')}
-                    style={{ opacity: canInvite ? 1 : 0.7 }}>
-                    <Plus size={14} /> Invitar usuario
-                    {!canInvite && <span style={{ fontSize: 10, marginLeft: 4, background: '#d97706', color: '#fff', padding: '1px 6px', borderRadius: 10 }}>Límite</span>}
-                  </button>
-                  {!canInvite && (
-                    <span style={{ fontSize: 11, color: 'var(--text3)' }}>
-                      {users.filter(u => u.active !== false).length}/{limits.maxUsers} usuarios en tu plan
-                    </span>
-                  )}
-                </div>
-              )}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => canInvite ? setInviteModal(true) : toast(`Tu plan ${PLAN_LABELS[plan]} permite máximo ${limits.maxUsers} usuario${limits.maxUsers !== 1 ? 's' : ''}. Actualizá tu plan para agregar más.`, 'warning')}
+                  style={{ opacity: canInvite ? 1 : 0.7 }}>
+                  <Plus size={14} /> Invitar usuario
+                  {!canInvite && <span style={{ fontSize: 10, marginLeft: 4, background: '#d97706', color: '#fff', padding: '1px 6px', borderRadius: 10 }}>Límite</span>}
+                </button>
+                {!canInvite && (
+                  <span style={{ fontSize: 11, color: 'var(--text3)' }}>
+                    {users.filter(u => u.active !== false).length}/{limits.maxUsers} usuarios en tu plan
+                  </span>
+                )}
+              </div>
             </div>
             <div className="table-wrap">
               <table>
@@ -417,7 +457,7 @@ export default function Settings() {
                         </span>
                       </td>
                       <td>
-                        {isAdmin && u.id !== profile?.id && (
+                        {u.id !== profile?.id && (
                           <button className={`btn btn-sm ${u.active !== false ? 'btn-danger' : 'btn-secondary'}`}
                             onClick={() => toggleUserActive(u)}>
                             <Trash2 size={12} />
@@ -448,7 +488,6 @@ export default function Settings() {
 
               {catalogSlug ? (
                 <>
-                  {/* Link del catálogo */}
                   <div style={{ background: 'var(--bg2)', borderRadius: 12, padding: '14px 16px', marginBottom: 16 }}>
                     <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 8 }}>Tu link público</div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -459,7 +498,6 @@ export default function Settings() {
                     </div>
                   </div>
 
-                  {/* Acciones */}
                   <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
                     <a href={catalogUrl} target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ flex: 1, justifyContent: 'center', textDecoration: 'none' }}>
                       <ExternalLink size={14} /> Ver catálogo
@@ -469,7 +507,6 @@ export default function Settings() {
                     </button>
                   </div>
 
-                  {/* Info */}
                   <div style={{ background: 'var(--primary-bg)', border: '1px solid rgba(13,110,253,0.15)', borderRadius: 12, padding: '14px 16px' }}>
                     <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--primary)', marginBottom: 10 }}>¿Cómo funciona?</div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -487,17 +524,14 @@ export default function Settings() {
                     </div>
                   </div>
 
-                  {/* Personalizar slug */}
-                  {isAdmin && bizForm && (
+                  {bizForm && (
                     <div style={{ marginTop: 20, borderTop: '1px solid var(--border)', paddingTop: 20 }}>
                       <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Personalizar URL del catálogo</div>
                       <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
                         <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
                           <label className="form-label">Identificador único</label>
                           <div style={{ display: 'flex', alignItems: 'center', border: '1.5px solid var(--border2)', borderRadius: 10, overflow: 'hidden' }}>
-                            <span style={{ padding: '9px 12px', background: 'var(--bg3)', fontSize: 12, color: 'var(--text3)', borderRight: '1px solid var(--border2)', whiteSpace: 'nowrap' }}>
-                              /catalogo/
-                            </span>
+                            <span style={{ padding: '9px 12px', background: 'var(--bg3)', fontSize: 12, color: 'var(--text3)', borderRight: '1px solid var(--border2)', whiteSpace: 'nowrap' }}>/catalogo/</span>
                             <input
                               style={{ flex: 1, padding: '9px 12px', border: 'none', outline: 'none', fontSize: 13, background: 'var(--bg-card)', color: 'var(--text)' }}
                               value={bizForm.slug || ''}
@@ -515,12 +549,11 @@ export default function Settings() {
                   )}
                 </>
               ) : (
-                /* Sin slug configurado */
                 <div style={{ textAlign: 'center', padding: '32px 0' }}>
                   <div style={{ fontSize: 48, marginBottom: 12 }}>🔗</div>
                   <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>Activá tu catálogo</div>
                   <p style={{ fontSize: 13, color: 'var(--text3)', marginBottom: 20 }}>Elegí un identificador para la URL de tu catálogo.</p>
-                  {isAdmin && bizForm && (
+                  {bizForm && (
                     <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', maxWidth: 360, margin: '0 auto' }}>
                       <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', border: '1.5px solid var(--border2)', borderRadius: 10, overflow: 'hidden' }}>
@@ -584,7 +617,7 @@ export default function Settings() {
                 </div>
               </div>
 
-              {(subStatus === 'active' || subStatus === 'trial') && isAdmin && (
+              {(subStatus === 'active' || subStatus === 'trial') && (
                 <div style={{ borderTop: '1px solid var(--border)', paddingTop: 20 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 6 }}>Cancelar suscripción</div>
                   <p style={{ fontSize: 12, color: 'var(--text3)', lineHeight: 1.6, marginBottom: 14 }}>

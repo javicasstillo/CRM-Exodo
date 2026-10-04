@@ -20,6 +20,7 @@ export default function Header({ profile, business, onNavigate, onLogout }) {
 
   const lowStock = phones.filter(p => p.status === 'disponible' && (Number(p.quantity) || 1) < 3);
   const initials = (name) => name?.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase() || '?';
+  const isAdmin = profile?.role === 'admin';
 
   return (
     <header style={{
@@ -37,10 +38,10 @@ export default function Header({ profile, business, onNavigate, onLogout }) {
         </span>
       </div>
 
-      {/* Alertas de stock — oculto en mobile via CSS */}
+      {/* Alertas de stock */}
       {lowStock.length > 0 && business?.plan !== 'emprendedor' && (
-  <button
-    className="stock-alert-btn"
+        <button
+          className="stock-alert-btn"
           onClick={() => onNavigate('phones')}
           style={{
             display: 'flex', alignItems: 'center', gap: 7,
@@ -78,7 +79,7 @@ export default function Header({ profile, business, onNavigate, onLogout }) {
             }
           </div>
 
-          {/* Info — oculto en mobile */}
+          {/* Info */}
           <div className="header-user-info" style={{ textAlign: 'left' }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', lineHeight: 1.2 }}>
               {profile?.name || 'Usuario'}
@@ -115,10 +116,12 @@ export default function Header({ profile, business, onNavigate, onLogout }) {
               </div>
             </div>
             <div style={{ padding: '6px' }}>
+              {isAdmin && (
+                <button className="dropdown-item" onClick={() => { onNavigate('settings'); setMenuOpen(false); }}>
+                  <Settings size={14} /> Configuración
+                </button>
+              )}
               <button className="dropdown-item" onClick={() => { onNavigate('settings'); setMenuOpen(false); }}>
-                <Settings size={14} /> Configuración
-              </button>
-              <button className="dropdown-item" onClick={() => { onNavigate('profile'); setMenuOpen(false); }}>
                 <User size={14} /> Mi perfil
               </button>
               <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
