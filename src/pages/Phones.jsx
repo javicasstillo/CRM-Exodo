@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { phonesApi } from '../api';
 import { Plus, Search, Smartphone, Edit2, Trash2, X, Camera, ImageOff, Minus } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
+import { useApp } from '../context/AppContext';
 
 const fmt = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(n || 0);
 
@@ -411,6 +412,7 @@ export default function Phones() {
   const [modal, setModal] = useState(null);
   const [saving, setSaving] = useState(false);
   const toast = useToast();
+  const { business } = useApp();
 
   useEffect(() => phonesApi.subscribe(setPhones), []);
 
@@ -505,7 +507,7 @@ export default function Phones() {
                 const cat = p.category || getCategory(p.model);
                 const qty = Number(p.quantity) || 1;
                 const showQty = needsQuantity(cat);
-                const isLowStock = showQty && p.status === 'disponible' && qty < 3;
+                const isLowStock = showQty && p.status === 'disponible' && qty < 3 && business?.plan !== 'emprendedor';
                 return (
                   <div key={p.id} className="phone-card" style={{ border: isLowStock ? '1.5px solid #fca5a5' : undefined }}>
                     <div className="phone-card-img" style={{ position: 'relative', overflow: 'hidden' }}>
