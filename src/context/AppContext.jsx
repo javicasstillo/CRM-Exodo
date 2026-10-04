@@ -49,6 +49,12 @@ export function AppProvider({ user, children }) {
       }
 
       setProfile(prof);
+      // Bloquear usuario desactivado
+if (prof.active === false) {
+  const { logout } = await import('../firebase');
+  await logout();
+  return;
+}
       setBusinessId(prof.businessId);
 
       const biz = await getBusinessConfig(prof.businessId);
