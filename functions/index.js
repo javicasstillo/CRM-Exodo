@@ -2,12 +2,15 @@ const { onRequest, onCall, HttpsError } = require("firebase-functions/v2/https")
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const admin = require("firebase-admin");
 const { MercadoPagoConfig, PreApproval, PreApprovalPlan } = require("mercadopago");
+const { Resend } = require('resend');
+
 
 admin.initializeApp();
 const db = admin.firestore();
 
 const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN;
 const MP_PUBLIC_KEY   = process.env.MP_PUBLIC_KEY;
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
 
 const PLANS = {
   emprendedor: { name: "Genesys App — Pequeño Emprendedor", amount: 20000 },
@@ -83,7 +86,62 @@ await db.collection('businesses').doc(uid).set({
   createdAt: admin.firestore.FieldValue.serverTimestamp(),
 });
 
-    res.status(200).json({ success: true, uid });
+    // Enviar email de bienvenida
+try {
+  const resend = new Resend(RESEND_API_KEY);
+  await resend.emails.send({
+    from: 'Genesys App <hola@genesys.com.ar>',
+    to: email,
+    subject: '¡Bienvenido a Genesys App! 🎉',
+    html: `
+      <div style="font-family:Inter,sans-serif;max-width:560px;margin:0 auto;padding:40px 24px;color:#0f1729">
+        <div style="text-align:center;margin-bottom:32px">
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:900;color:#0d6efd;letter-spacing:-0.5px">Genesys <span style="color:#0f1729">App</span></div>
+          <div style="font-size:12px;color:#7b8ab8;margin-top:4px;letter-spacing:1px;text-transform:uppercase">Sistema de gestión</div>
+        </div>
+
+        <div style="background:linear-gradient(135deg,#0d6efd,#1a56db);border-radius:16px;padding:32px;text-align:center;margin-bottom:32px;color:#fff">
+          <div style="font-size:36px;margin-bottom:12px">🎉</div>
+          <h1 style="font-size:22px;font-weight:800;margin:0 0 8px;font-family:'Space Grotesk',sans-serif">¡Tu cuenta está lista!</h1>
+          <p style="font-size:15px;opacity:0.85;margin:0">Bienvenido a <strong>${businessName}</strong></p>
+        </div>
+
+        <p style="font-size:15px;line-height:1.7;color:#3d4e72;margin-bottom:20px">
+          Hola, tu sistema de gestión ya está activo. Podés empezar a cargar tu stock, registrar ventas y controlar tu negocio desde un solo lugar.
+        </p>
+
+        <div style="background:#f8f9fc;border-radius:12px;padding:20px 24px;margin-bottom:28px;border:1px solid #dde3f0">
+          <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#7b8ab8;margin-bottom:12px">Tu cuenta</div>
+          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #dde3f0;font-size:13px">
+            <span style="color:#7b8ab8">Negocio</span><strong style="color:#0f1729">${businessName}</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #dde3f0;font-size:13px">
+            <span style="color:#7b8ab8">Email</span><strong style="color:#0f1729">${email}</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:13px">
+            <span style="color:#7b8ab8">Plan</span><strong style="color:#0d6efd;text-transform:capitalize">${plan}</strong>
+          </div>
+        </div>
+
+        <div style="text-align:center;margin-bottom:32px">
+          <a href="https://app.genesys.com.ar" style="display:inline-block;background:#0d6efd;color:#fff;font-size:15px;font-weight:700;padding:14px 36px;border-radius:12px;text-decoration:none;box-shadow:0 4px 20px rgba(13,110,253,0.3)">
+            Ingresar al sistema →
+          </a>
+        </div>
+
+        <div style="border-top:1px solid #dde3f0;padding-top:20px;text-align:center;font-size:12px;color:#7b8ab8">
+          <p style="margin:0">¿Necesitás ayuda? Escribinos por <a href="https://api.whatsapp.com/send?phone=2604104160" style="color:#0d6efd;text-decoration:none">WhatsApp</a></p>
+          <p style="margin:8px 0 0">© 2026 Genesys App · San Rafael, Mendoza</p>
+        </div>
+      </div>
+    `,
+  });
+} catch (emailErr) {
+  console.error('Error enviando email:', emailErr);
+  // No fallar el registro si el email falla
+}
+
+res.status(200).json({ success: true, uid });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
