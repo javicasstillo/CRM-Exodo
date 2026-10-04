@@ -10,6 +10,7 @@ import Expenses from './pages/Expenses';
 import Stats from './pages/Stats';
 import Settings from './pages/Settings';
 import AdminPanel from './pages/AdminPanel';
+import Catalog from './pages/Catalog';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import { ToastProvider } from './context/ToastContext';
@@ -17,7 +18,6 @@ import { AppProvider, useApp } from './context/AppContext';
 import SubscriptionGate from './components/SubscriptionGate';
 import { Menu } from 'lucide-react';
 
-// Tu UID de superadmin
 const SUPER_ADMIN_UID = '5aHXAuMsBxPTlmyW9kDSM4tGXNX2';
 
 const PAGE_TITLES = {
@@ -144,6 +144,11 @@ export default function App() {
   const [user, setUser] = useState(undefined);
 
   useEffect(() => onAuthChange(setUser), []);
+
+  // ── Ruta pública del catálogo ──
+  if (window.location.pathname.startsWith('/catalogo/')) {
+    return <Catalog />;
+  }
 
   if (user === undefined) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', flexDirection: 'column', gap: 16, background: 'var(--bg)' }}>
