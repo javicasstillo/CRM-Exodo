@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { phonesApi, salesApi, expensesApi, buyersApi } from '../api';
 import { Smartphone, ShoppingCart, TrendingUp, DollarSign, AlertTriangle, Package, Users } from 'lucide-react';
 import { SourceIcon, SourceLabel } from '../components/SourceIcon';
+import { useApp } from '../context/AppContext';
 
 const fmt = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(n || 0);
 
@@ -20,6 +21,10 @@ export default function Dashboard() {
   const [sales, setSales] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [buyers, setBuyers] = useState([]);
+  const { business } = useApp();
+
+  const plan = business?.plan || 'emprendedor';
+  const isBasic = plan === 'emprendedor';
 
   useEffect(() => {
     const u1 = phonesApi.subscribe(setPhones);
@@ -31,7 +36,6 @@ export default function Dashboard() {
 
   const stock = phones.filter(p => p.status === 'disponible').reduce((a, p) => a + (Number(p.quantity) || 1), 0);
   const vendidos = phones.filter(p => p.status === 'vendido').length;
-  const reservados = phones.filter(p => p.status === 'reservado').reduce((a, p) => a + (Number(p.quantity) || 1), 0);
   const completed = sales.filter(s => s.status === 'completada');
   const totalIngresos = completed.reduce((a, s) => a + Number(s.salePrice || 0), 0);
   const totalCostos = completed.reduce((a, s) => a + Number(s.costPrice || 0), 0);
@@ -78,7 +82,7 @@ export default function Dashboard() {
       <div className="page-header">
         <div>
           <h2>Panel Principal</h2>
-          <p>Resumen general de ÉXODO</p>
+          <p>Resumen general de {business?.name || 'tu negocio'}</p>
         </div>
       </div>
 
@@ -97,27 +101,17 @@ export default function Dashboard() {
 
         {/* FILA 1 — KPIs */}
         <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr 1fr', gap: 14, marginBottom: 20 }}>
-
-          {/* Card mes actual — azul */}
           <div style={{
             background: 'linear-gradient(135deg, var(--primary) 0%, #1a56db 100%)',
             borderRadius: 'var(--radius-lg)', padding: '22px 24px',
             display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
             boxShadow: 'var(--shadow-blue)', color: '#fff', position: 'relative', overflow: 'hidden',
           }}>
-            {/* Círculo decorativo */}
             <div style={{ position: 'absolute', top: -20, right: -20, width: 100, height: 100, borderRadius: '50%', background: 'rgba(255,255,255,0.08)' }} />
             <div style={{ position: 'absolute', bottom: -30, right: 20, width: 70, height: 70, borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
-
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', opacity: 0.75, marginBottom: 10 }}>
-              Este mes
-            </div>
-            <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: -0.5, lineHeight: 1, marginBottom: 8 }}>
-              {fmt(gananciaMes)}
-            </div>
-            <div style={{ fontSize: 11, opacity: 0.75 }}>
-              Ganancia · {ventasMes.length} ventas · {fmt(ingresosMes)} ingresos
-            </div>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', opacity: 0.75, marginBottom: 10 }}>Este mes</div>
+            <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: -0.5, lineHeight: 1, marginBottom: 8 }}>{fmt(gananciaMes)}</div>
+            <div style={{ fontSize: 11, opacity: 0.75 }}>Ganancia · {ventasMes.length} ventas · {fmt(ingresosMes)} ingresos</div>
           </div>
 
           <div className="stat-card">
@@ -145,7 +139,6 @@ export default function Dashboard() {
         {/* FILA 2 — Últimas ventas + Stock disponible */}
         <div className="dashboard-cols" style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 16, marginBottom: 16 }}>
 
-          {/* Últimas ventas */}
           <div className="card">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <div>
@@ -188,7 +181,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Stock disponible */}
           <div className="card">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <div>
@@ -223,44 +215,46 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* FILA 3 — Top modelos + Origen clientes + Financiero */}
-        <div className="dashboard-cols" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
+        {/* FILA 3 — Top modelos (Pyme+) + Origen clientes + Financiero */}
+        <div className="dashboard-cols" style={{ display: 'grid', gridTemplateColumns: isBasic ? '1fr 1fr' : '1fr 1fr 1fr', gap: 16 }}>
 
-          {/* Top modelos */}
-          <div className="card">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <h3 style={{ fontSize: 15, fontWeight: 700 }}>Top Modelos</h3>
-              <div style={{ width: 32, height: 32, borderRadius: 10, background: 'var(--primary-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <TrendingUp size={15} color="var(--primary)" />
-              </div>
-            </div>
-            {topModels.length === 0
-              ? <p style={{ color: 'var(--text3)', fontSize: 13 }}>Sin ventas aún</p>
-              : topModels.map(([model, data], i) => (
-                <div key={model} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{
-                      width: 24, height: 24, borderRadius: 7, flexShrink: 0,
-                      background: i === 0 ? 'var(--primary)' : 'var(--bg3)',
-                      color: i === 0 ? '#fff' : 'var(--text2)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 11, fontWeight: 700,
-                      boxShadow: i === 0 ? 'var(--shadow-blue)' : 'none',
-                    }}>
-                      {i + 1}
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 600 }}>{model}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text3)' }}>{fmt(data.profit)} ganancia</div>
-                    </div>
-                  </div>
-                  <span style={{ fontSize: 18, fontWeight: 800, color: i === 0 ? 'var(--primary)' : 'var(--text)' }}>{data.count}</span>
+          {/* Top modelos — solo Pyme y Empresa */}
+          {!isBasic && (
+            <div className="card">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                <h3 style={{ fontSize: 15, fontWeight: 700 }}>Top Modelos</h3>
+                <div style={{ width: 32, height: 32, borderRadius: 10, background: 'var(--primary-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <TrendingUp size={15} color="var(--primary)" />
                 </div>
-              ))
-            }
-          </div>
+              </div>
+              {topModels.length === 0
+                ? <p style={{ color: 'var(--text3)', fontSize: 13 }}>Sin ventas aún</p>
+                : topModels.map(([model, data], i) => (
+                  <div key={model} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{
+                        width: 24, height: 24, borderRadius: 7, flexShrink: 0,
+                        background: i === 0 ? 'var(--primary)' : 'var(--bg3)',
+                        color: i === 0 ? '#fff' : 'var(--text2)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 11, fontWeight: 700,
+                        boxShadow: i === 0 ? 'var(--shadow-blue)' : 'none',
+                      }}>
+                        {i + 1}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600 }}>{model}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text3)' }}>{fmt(data.profit)} ganancia</div>
+                      </div>
+                    </div>
+                    <span style={{ fontSize: 18, fontWeight: 800, color: i === 0 ? 'var(--primary)' : 'var(--text)' }}>{data.count}</span>
+                  </div>
+                ))
+              }
+            </div>
+          )}
 
-          {/* Origen clientes — barras de colores con shimmer */}
+          {/* Origen clientes */}
           <div className="card">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <h3 style={{ fontSize: 15, fontWeight: 700 }}>Origen Clientes</h3>
@@ -280,10 +274,7 @@ export default function Dashboard() {
                       <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text2)' }}>{count} · {pct}%</span>
                     </div>
                     <div className="progress-wrap">
-                      <div
-                        className={`progress-bar ${barClass}`}
-                        style={{ width: `${Math.max(pct, 4)}%` }}
-                      />
+                      <div className={`progress-bar ${barClass}`} style={{ width: `${Math.max(pct, 4)}%` }} />
                     </div>
                   </div>
                 );
@@ -306,12 +297,7 @@ export default function Dashboard() {
                 { label: 'Ganancia bruta', value: fmt(gananciaBruta), highlight: true },
                 { label: 'Gastos operativos', value: `− ${fmt(totalGastos)}` },
               ].map((row, i) => (
-                <div key={i} style={{
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  padding: '10px 0',
-                  borderBottom: row.highlight ? '2px solid var(--primary)' : '1px solid var(--border)',
-                  fontSize: 12,
-                }}>
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: row.highlight ? '2px solid var(--primary)' : '1px solid var(--border)', fontSize: 12 }}>
                   <span style={{ color: 'var(--text3)', fontWeight: 500 }}>{row.label}</span>
                   <span style={{ fontWeight: 700, fontSize: 13, color: row.highlight ? 'var(--primary)' : 'var(--text)' }}>{row.value}</span>
                 </div>
