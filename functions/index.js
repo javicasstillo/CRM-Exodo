@@ -223,10 +223,62 @@ exports.mpWebhook = onRequest(async (req, res) => {
     if (mpStatus === "authorized") newStatus = "active";
 
     await bizRef.update({
-      status: newStatus,
-      mpStatus,
-      lastPaymentAt: admin.firestore.FieldValue.serverTimestamp(),
+  status: newStatus,
+  mpStatus,
+  lastPaymentAt: admin.firestore.FieldValue.serverTimestamp(),
+});
+
+// Notificar al admin de Genesys cuando alguien paga
+if (newStatus === 'active') {
+  try {
+    const { Resend } = require('resend');
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    const bizData = bizSnap.docs[0].data();
+
+    await resend.emails.send({
+      from: 'Genesys App <hola@genesys.com.ar>',
+      to: 'javiercastillo.tuc@gmail.com',
+      subject: '💰 Nuevo pago recibido — Genesys App',
+      html: `
+        <div style="font-family:Inter,sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;color:#0f1729">
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:900;color:#0d6efd;margin-bottom:24px">
+            Genesys <span style="color:#0f1729">App</span>
+          </div>
+
+          <div style="background:linear-gradient(135deg,#16a34a,#15803d);border-radius:14px;padding:24px;color:#fff;margin-bottom:24px;text-align:center">
+            <div style="font-size:36px;margin-bottom:8px">💰</div>
+            <div style="font-size:20px;font-weight:800;margin-bottom:4px">¡Nuevo pago recibido!</div>
+            <div style="font-size:13px;opacity:0.85">Un cliente activó su suscripción</div>
+          </div>
+
+          <div style="background:#f8f9fc;border-radius:12px;padding:18px 20px;border:1px solid #dde3f0">
+            <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#7b8ab8;margin-bottom:12px">Detalle</div>
+            <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #dde3f0;font-size:13px">
+              <span style="color:#7b8ab8">Negocio</span>
+              <strong>${bizData.name || '—'}</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #dde3f0;font-size:13px">
+              <span style="color:#7b8ab8">Plan</span>
+              <strong style="color:#0d6efd;text-transform:capitalize">${bizData.plan || '—'}</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:13px">
+              <span style="color:#7b8ab8">Estado</span>
+              <strong style="color:#16a34a">Activo ✓</strong>
+            </div>
+          </div>
+
+          <div style="text-align:center;margin-top:24px">
+            <a href="https://app.genesys.com.ar" style="display:inline-block;background:#0d6efd;color:#fff;font-size:14px;font-weight:700;padding:12px 28px;border-radius:10px;text-decoration:none">
+              Ver panel admin →
+            </a>
+          </div>
+        </div>
+      `,
     });
+  } catch (emailErr) {
+    console.error('Error enviando notificación de pago:', emailErr);
+  }
+}
 
     res.status(200).send("ok");
   } catch (e) {
