@@ -35,7 +35,6 @@ function LockedCard({ title }) {
   );
 }
 
-// Gráfico de barras vertical — ganancias por mes
 function BarChart({ data }) {
   const max = Math.max(...data.map(d => d.profit), 1);
   const [hovered, setHovered] = useState(null);
@@ -46,12 +45,7 @@ function BarChart({ data }) {
   return (
     <div style={{ position: 'relative' }}>
       {hovered !== null && (
-        <div style={{
-          position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
-          background: 'var(--bg-card)', border: '1px solid var(--border)',
-          borderRadius: 10, padding: '8px 14px', fontSize: 12,
-          boxShadow: 'var(--shadow-md)', zIndex: 10, whiteSpace: 'nowrap', pointerEvents: 'none',
-        }}>
+        <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 14px', fontSize: 12, boxShadow: 'var(--shadow-md)', zIndex: 10, whiteSpace: 'nowrap', pointerEvents: 'none' }}>
           <div style={{ fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>{data[hovered]?.label}</div>
           <div style={{ color: 'var(--primary)', fontWeight: 700 }}>Ganancia: {fmt(data[hovered]?.profit)}</div>
           <div style={{ color: 'var(--text3)', fontSize: 11 }}>Ingresos: {fmt(data[hovered]?.revenue)} · {data[hovered]?.count} ventas</div>
@@ -63,25 +57,11 @@ function BarChart({ data }) {
           const isHov = hovered === i;
           return (
             <div key={m.key} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, cursor: 'pointer' }}
-              onMouseEnter={() => setHovered(i)}
-              onMouseLeave={() => setHovered(null)}>
-              <div style={{
-                width: '100%', height: h, borderRadius: '6px 6px 3px 3px',
-                background: isHov
-                  ? 'linear-gradient(180deg, #3d8bfd, #0d6efd)'
-                  : 'linear-gradient(180deg, rgba(13,110,253,0.7), rgba(13,110,253,0.4))',
-                transition: 'all 0.2s ease',
-                transform: isHov ? 'scaleY(1.03)' : 'scaleY(1)',
-                transformOrigin: 'bottom',
-                position: 'relative', overflow: 'hidden',
-              }}>
-                {isHov && (
-                  <div style={{ position: 'absolute', top: 0, left: '-60%', width: '40%', height: '100%', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)', animation: 'shimmer 1s' }} />
-                )}
+              onMouseEnter={() => setHovered(i)} onMouseLeave={() => setHovered(null)}>
+              <div style={{ width: '100%', height: h, borderRadius: '6px 6px 3px 3px', background: isHov ? 'linear-gradient(180deg, #3d8bfd, #0d6efd)' : 'linear-gradient(180deg, rgba(13,110,253,0.7), rgba(13,110,253,0.4))', transition: 'all 0.2s ease', transform: isHov ? 'scaleY(1.03)' : 'scaleY(1)', transformOrigin: 'bottom', position: 'relative', overflow: 'hidden' }}>
+                {isHov && <div style={{ position: 'absolute', top: 0, left: '-60%', width: '40%', height: '100%', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)', animation: 'shimmer 1s' }} />}
               </div>
-              <span style={{ fontSize: 9, color: isHov ? 'var(--primary)' : 'var(--text3)', fontWeight: 700, whiteSpace: 'nowrap' }}>
-                {m.label.split(' ')[0]}
-              </span>
+              <span style={{ fontSize: 9, color: isHov ? 'var(--primary)' : 'var(--text3)', fontWeight: 700, whiteSpace: 'nowrap' }}>{m.label.split(' ')[0]}</span>
             </div>
           );
         })}
@@ -90,7 +70,6 @@ function BarChart({ data }) {
   );
 }
 
-// Gráfico de dona — origen de clientes
 function DonutChart({ data, total }) {
   const [hovered, setHovered] = useState(null);
   const r = 70, cx = 90, cy = 90, stroke = 22;
@@ -115,18 +94,13 @@ function DonutChart({ data, total }) {
       <div style={{ position: 'relative', flexShrink: 0 }}>
         <svg width={180} height={180} style={{ overflow: 'visible' }}>
           {segments.map((seg, i) => (
-            <circle key={i}
-              cx={cx} cy={cy} r={r}
-              fill="none"
-              stroke={seg.color}
+            <circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={seg.color}
               strokeWidth={hovered === i ? stroke + 3 : stroke}
               strokeDasharray={`${seg.dash} ${seg.gap}`}
               strokeDashoffset={-seg.offset + circumference / 4}
               strokeLinecap="round"
               style={{ cursor: 'pointer', transition: 'stroke-width 0.2s', opacity: hovered !== null && hovered !== i ? 0.4 : 1 }}
-              onMouseEnter={() => setHovered(i)}
-              onMouseLeave={() => setHovered(null)}
-            />
+              onMouseEnter={() => setHovered(i)} onMouseLeave={() => setHovered(null)} />
           ))}
           <text x={cx} y={cy - 8} textAnchor="middle" style={{ fontSize: 20, fontWeight: 800, fill: 'var(--text)', fontFamily: 'Space Grotesk, sans-serif' }}>
             {hov ? Math.round(hov.pct * 100) + '%' : total}
@@ -139,12 +113,9 @@ function DonutChart({ data, total }) {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8, minWidth: 120 }}>
         {segments.map((seg, i) => (
           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', opacity: hovered !== null && hovered !== i ? 0.4 : 1, transition: 'opacity 0.2s' }}
-            onMouseEnter={() => setHovered(i)}
-            onMouseLeave={() => setHovered(null)}>
+            onMouseEnter={() => setHovered(i)} onMouseLeave={() => setHovered(null)}>
             <div style={{ width: 10, height: 10, borderRadius: 3, background: seg.color, flexShrink: 0 }} />
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{seg.source}</div>
-            </div>
+            <div style={{ flex: 1 }}><div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{seg.source}</div></div>
             <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text2)' }}>{seg.count} · {Math.round(seg.pct * 100)}%</span>
           </div>
         ))}
@@ -153,7 +124,6 @@ function DonutChart({ data, total }) {
   );
 }
 
-// Gráfico de barras horizontal — modelos más vendidos
 function HorizontalBars({ data }) {
   const max = data[0]?.[1]?.count || 1;
   const [hovered, setHovered] = useState(null);
@@ -166,20 +136,10 @@ function HorizontalBars({ data }) {
         const pct = Math.max(6, (d.count / max) * 100);
         const isHov = hovered === i;
         return (
-          <div key={model} style={{ cursor: 'pointer' }}
-            onMouseEnter={() => setHovered(i)}
-            onMouseLeave={() => setHovered(null)}>
+          <div key={model} style={{ cursor: 'pointer' }} onMouseEnter={() => setHovered(i)} onMouseLeave={() => setHovered(null)}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{
-                  width: 22, height: 22, borderRadius: 6, flexShrink: 0,
-                  background: i === 0 ? 'var(--primary)' : 'var(--bg3)',
-                  color: i === 0 ? '#fff' : 'var(--text3)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 10, fontWeight: 800,
-                }}>
-                  {i + 1}
-                </div>
+                <div style={{ width: 22, height: 22, borderRadius: 6, flexShrink: 0, background: i === 0 ? 'var(--primary)' : 'var(--bg3)', color: i === 0 ? '#fff' : 'var(--text3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800 }}>{i + 1}</div>
                 <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{model}</span>
               </div>
               <div style={{ textAlign: 'right' }}>
@@ -188,24 +148,50 @@ function HorizontalBars({ data }) {
               </div>
             </div>
             <div style={{ height: 8, background: 'var(--bg3)', borderRadius: 20, overflow: 'hidden' }}>
-              <div style={{
-                height: '100%', width: `${pct}%`, borderRadius: 20,
-                background: i === 0
-                  ? 'linear-gradient(90deg, #0d6efd, #3d8bfd)'
-                  : isHov
-                  ? 'linear-gradient(90deg, var(--primary), #3d8bfd)'
-                  : 'linear-gradient(90deg, var(--border2), var(--border))',
-                transition: 'all 0.3s ease',
-                position: 'relative', overflow: 'hidden',
-              }}>
+              <div style={{ height: '100%', width: `${pct}%`, borderRadius: 20, background: i === 0 ? 'linear-gradient(90deg, #0d6efd, #3d8bfd)' : isHov ? 'linear-gradient(90deg, var(--primary), #3d8bfd)' : 'linear-gradient(90deg, var(--border2), var(--border))', transition: 'all 0.3s ease', position: 'relative', overflow: 'hidden' }}>
                 <div style={{ position: 'absolute', top: 0, left: '-60%', width: '40%', height: '100%', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)', animation: 'shimmer 2s infinite' }} />
               </div>
             </div>
-            {isHov && (
-              <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 3 }}>
-                Ganancia: {fmt(d.profit)}
+            {isHov && <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 3 }}>Ganancia: {fmt(d.profit)}</div>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// Ranking de vendedores
+function VendedorBars({ data }) {
+  const max = data[0]?.count || 1;
+  const [hovered, setHovered] = useState(null);
+
+  if (data.length === 0) return <p style={{ color: 'var(--text3)', fontSize: 13 }}>Sin ventas registradas todavía</p>;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {data.map((v, i) => {
+        const pct = Math.max(6, (v.count / max) * 100);
+        const isHov = hovered === i;
+        return (
+          <div key={v.name} style={{ cursor: 'pointer' }} onMouseEnter={() => setHovered(i)} onMouseLeave={() => setHovered(null)}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0, background: i === 0 ? 'var(--primary)' : 'var(--bg3)', color: i === 0 ? '#fff' : 'var(--text3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, border: i === 0 ? '2px solid rgba(13,110,253,0.3)' : '2px solid var(--border)' }}>
+                  {i + 1}
+                </div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{v.name}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text3)' }}>{v.count} venta{v.count !== 1 ? 's' : ''}</div>
+                </div>
               </div>
-            )}
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: i === 0 ? 'var(--primary)' : 'var(--text)' }}>{fmt(v.profit)}</div>
+                <div style={{ fontSize: 10, color: 'var(--text3)' }}>ganancia</div>
+              </div>
+            </div>
+            <div style={{ height: 6, background: 'var(--bg3)', borderRadius: 20, overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${pct}%`, borderRadius: 20, background: i === 0 ? 'linear-gradient(90deg, #0d6efd, #3d8bfd)' : isHov ? 'linear-gradient(90deg, var(--primary), #3d8bfd)' : 'linear-gradient(90deg, var(--border2), var(--border))', transition: 'all 0.3s ease' }} />
+            </div>
           </div>
         );
       })}
@@ -258,6 +244,19 @@ export default function Stats() {
     bySource[src]++;
   });
   const sourceList = Object.entries(bySource).sort((a, b) => b[1] - a[1]).map(([source, count]) => ({ source, count }));
+
+  // Ranking de vendedores
+  const byVendedor = {};
+  completed.forEach(s => {
+    const name = s.vendedorName || 'Sin asignar';
+    if (!byVendedor[name]) byVendedor[name] = { count: 0, profit: 0, revenue: 0 };
+    byVendedor[name].count++;
+    byVendedor[name].revenue += Number(s.salePrice || 0);
+    byVendedor[name].profit += Number(s.salePrice || 0) - Number(s.costPrice || 0);
+  });
+  const vendedorRanking = Object.entries(byVendedor)
+    .sort((a, b) => b[1].count - a[1].count)
+    .map(([name, data]) => ({ name, ...data }));
 
   // Ganancias por mes
   const byMonth = {};
@@ -316,8 +315,6 @@ export default function Stats() {
 
         {/* FILA 1 — Ganancias por mes + Origen clientes */}
         <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 16, marginBottom: 16 }}>
-
-          {/* Ganancias por mes */}
           {isBasic ? (
             <LockedCard title="Ganancias por mes" />
           ) : (
@@ -335,7 +332,6 @@ export default function Stats() {
             </div>
           )}
 
-          {/* Origen de clientes — dona */}
           <div className="card">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <div>
@@ -350,10 +346,8 @@ export default function Stats() {
           </div>
         </div>
 
-        {/* FILA 2 — Modelos más vendidos + Resumen financiero */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-
-          {/* Modelos más vendidos */}
+        {/* FILA 2 — Modelos + Vendedores */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
           {isBasic ? (
             <LockedCard title="Modelos más vendidos" />
           ) : (
@@ -371,14 +365,34 @@ export default function Stats() {
             </div>
           )}
 
-          {/* Resumen financiero */}
-          <div className="card">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-              <h3 style={{ fontSize: 15, fontWeight: 700 }}>Resumen financiero</h3>
-              <div style={{ width: 32, height: 32, borderRadius: 10, background: 'var(--primary-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <DollarSign size={15} color="var(--primary)" />
+          {/* Ranking vendedores — solo Pyme y Empresa */}
+          {isBasic ? (
+            <LockedCard title="Ranking de vendedores" />
+          ) : (
+            <div className="card">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+                <div>
+                  <h3 style={{ fontSize: 15, fontWeight: 700 }}>Ranking de vendedores</h3>
+                  <p style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>{vendedorRanking.length} vendedor{vendedorRanking.length !== 1 ? 'es' : ''}</p>
+                </div>
+                <div style={{ width: 32, height: 32, borderRadius: 10, background: 'var(--primary-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Users size={15} color="var(--primary)" />
+                </div>
               </div>
+              <VendedorBars data={vendedorRanking} />
             </div>
+          )}
+        </div>
+
+        {/* FILA 3 — Resumen financiero */}
+        <div className="card">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+            <h3 style={{ fontSize: 15, fontWeight: 700 }}>Resumen financiero</h3>
+            <div style={{ width: 32, height: 32, borderRadius: 10, background: 'var(--primary-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <DollarSign size={15} color="var(--primary)" />
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               {[
                 { label: 'Ingresos totales', value: fmt(totalIngresos) },
@@ -395,14 +409,24 @@ export default function Stats() {
                 <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>GANANCIA NETA</span>
                 <span style={{ fontSize: 24, fontWeight: 800, color: 'var(--primary)', fontFamily: 'Space Grotesk, sans-serif' }}>{fmt(gananciaNeta)}</span>
               </div>
-              <div style={{ marginTop: 16, padding: '12px 16px', background: 'var(--primary-bg)', borderRadius: 10, border: '1px solid rgba(13,110,253,0.15)', display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: 12, color: 'var(--primary)', fontWeight: 600 }}>Margen promedio</span>
-                <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--primary)' }}>{margenProm}%</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 12 }}>
+              <div style={{ padding: '16px 20px', background: 'var(--primary-bg)', borderRadius: 12, border: '1px solid rgba(13,110,253,0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 13, color: 'var(--primary)', fontWeight: 600 }}>Margen promedio</span>
+                <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--primary)' }}>{margenProm}%</span>
+              </div>
+              <div style={{ padding: '16px 20px', background: 'var(--bg2)', borderRadius: 12, border: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 13, color: 'var(--text3)', fontWeight: 600 }}>Ticket promedio</span>
+                <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>{fmt(ticketProm)}</span>
+              </div>
+              <div style={{ padding: '16px 20px', background: 'var(--bg2)', borderRadius: 12, border: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 13, color: 'var(--text3)', fontWeight: 600 }}>Total ventas</span>
+                <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)' }}>{completed.length}</span>
               </div>
             </div>
           </div>
-
         </div>
+
       </div>
     </>
   );

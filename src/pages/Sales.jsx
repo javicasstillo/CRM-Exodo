@@ -22,7 +22,6 @@ const DATE_FILTERS = [
   { id: 'mes_anterior', label: 'Mes anterior' },
 ];
 
-// Restricciones por plan
 const PLAN_LIMITS = {
   emprendedor: { maxUsers: 1, canExportExcel: false },
   pyme:        { maxUsers: 3, canExportExcel: true  },
@@ -104,6 +103,7 @@ async function exportRecibo(sale, phone, buyer, business) {
       <div class="item"><label>Forma de pago</label><span>${sale.paymentMethod}</span></div>
       ${sale.installments ? `<div class="item"><label>Cuotas</label><span>${sale.installments}</span></div>` : ''}
       <div class="item"><label>Estado</label><span class="badge">${sale.status}</span></div>
+      ${sale.vendedorName ? `<div class="item"><label>Vendedor</label><span>${sale.vendedorName}</span></div>` : ''}
     </div>
   </div>
   ${sale.notes ? `<div class="section"><div class="section-title">Observaciones</div><p style="font-size:13px;color:#444;line-height:1.6">${sale.notes}</p></div>` : ''}
@@ -260,7 +260,7 @@ export default function Sales() {
   const [sales, setSales] = useState([]);
   const [phones, setPhones] = useState([]);
   const [buyers, setBuyers] = useState([]);
-  const { business, subStatus } = useApp();
+  const { business, subStatus, profile } = useApp();
   const toast = useToast();
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('todos');
@@ -269,9 +269,9 @@ export default function Sales() {
   const [modal, setModal] = useState(null);
   const [saving, setSaving] = useState(false);
 
-  // Plan del negocio
   const plan = business?.plan || 'emprendedor';
   const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.emprendedor;
+  const isPyme = plan !== 'emprendedor';
 
   useEffect(() => {
     const u1 = salesApi.subscribe(setSales);
@@ -301,7 +301,13 @@ export default function Sales() {
     const q = search.toLowerCase();
     const phone = getPhone(s.phoneId);
     const buyer = getBuyer(s.buyerId);
-    return (phone?.model?.toLowerCase().includes(q) || buyer?.name?.toLowerCase().includes(q) || s.paymentMethod?.toLowerCase().includes(q) || s.source?.toLowerCase().includes(q))
+    return (
+      phone?.model?.toLowerCase().includes(q) ||
+      buyer?.name?.toLowerCase().includes(q) ||
+      s.paymentMethod?.toLowerCase().includes(q) ||
+      s.source?.toLowerCase().includes(q) ||
+      s.vendedorName?.toLowerCase().includes(q)
+    )
       && (filterStatus === 'todos' || s.status === filterStatus)
       && filterByDate(s);
   });
@@ -313,7 +319,11 @@ export default function Sales() {
     setSaving(true);
     try {
       if (modal === 'new') {
-        await salesApi.add(form);
+        await salesApi.add({
+          ...form,
+          vendedorId: profile?.id || '',
+          vendedorName: profile?.name || '',
+        });
         if (form.phoneId) await phonesApi.update(form.phoneId, { status: 'vendido' });
         toast('Venta registrada correctamente', 'success');
       } else {
@@ -347,6 +357,7 @@ export default function Sales() {
         'Color': phone?.color || '—',
         'Comprador': buyer?.name || '—',
         'DNI': buyer?.dni || '—',
+        'Vendedor': s.vendedorName || '—',
         'Precio venta': Number(s.salePrice || 0),
         'Costo': Number(s.costPrice || 0),
         'Ganancia': Number(s.salePrice || 0) - Number(s.costPrice || 0),
@@ -375,7 +386,6 @@ export default function Sales() {
       <div className="page-header">
         <div><h2>Ventas</h2><p>{sales.length} operaciones registradas</p></div>
         <div style={{ display: 'flex', gap: 10 }}>
-          {/* Botón Excel — visible siempre, bloqueado si no tiene plan */}
           <button
             className={`btn ${limits.canExportExcel ? 'btn-secondary' : 'btn-outline'}`}
             onClick={exportExcel}
@@ -404,7 +414,6 @@ export default function Sales() {
           </div>
         </div>
 
-        {/* Filtros de fecha */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
           {DATE_FILTERS.map(f => (
             <button key={f.id} className={`btn btn-sm ${filterDate === f.id ? 'btn-primary' : 'btn-secondary'}`}
@@ -417,7 +426,7 @@ export default function Sales() {
         <div className="toolbar">
           <div className="search-box">
             <Search className="search-icon" />
-            <input className="form-input" placeholder="Buscar por modelo, comprador, forma de pago, origen..." value={search} onChange={e => setSearch(e.target.value)} />
+            <input className="form-input" placeholder="Buscar por modelo, comprador, vendedor, origen..." value={search} onChange={e => setSearch(e.target.value)} />
           </div>
           {['todos', 'completada', 'pendiente', 'cancelada'].map(f => (
             <button key={f} className={`btn btn-sm ${filterStatus === f ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setFilterStatus(f)}>
@@ -435,6 +444,7 @@ export default function Sales() {
                   <tr>
                     <th>Equipo</th>
                     <th>Comprador</th>
+                    {isPyme && <th>Vendedor</th>}
                     <th>Fecha</th>
                     <th>Precio venta</th>
                     <th>Ganancia</th>
@@ -456,6 +466,13 @@ export default function Sales() {
                           <div style={{ fontSize: 11, color: 'var(--text3)' }}>{phone?.storage} · {phone?.color}</div>
                         </td>
                         <td style={{ fontSize: 13 }}>{buyer?.name || '—'}</td>
+                        {isPyme && (
+                          <td>
+                            <span style={{ fontSize: 12, color: 'var(--text2)', fontWeight: 500 }}>
+                              {s.vendedorName || '—'}
+                            </span>
+                          </td>
+                        )}
                         <td style={{ fontSize: 12, color: 'var(--text2)' }}>{s.saleDate}</td>
                         <td style={{ fontWeight: 700, color: 'var(--primary)' }}>{fmt(s.salePrice)}</td>
                         <td style={{ fontWeight: 700, color: '#16a34a' }}>{fmt(ganancia)}</td>
@@ -483,7 +500,6 @@ export default function Sales() {
                 </tbody>
               </table>
 
-              {/* Paginación */}
               {totalPages > 1 && (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderTop: '1px solid var(--border)' }}>
                   <span style={{ fontSize: 12, color: 'var(--text3)' }}>
