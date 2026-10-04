@@ -1,52 +1,214 @@
 import { useState, useEffect } from 'react';
 import { salesApi, phonesApi, expensesApi } from '../api';
 import { SourceLabel } from '../components/SourceIcon';
-import { TrendingUp, DollarSign, ShoppingCart, BarChart2, Lock } from 'lucide-react';
+import { TrendingUp, DollarSign, ShoppingCart, BarChart2, Lock, Users } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 const fmt = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(n || 0);
-
 const MONTH_NAMES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
-const SOURCE_BAR_CLASS = {
-  'Instagram':     'progress-bar--instagram',
-  'Facebook':      'progress-bar--facebook',
-  'TikTok':        'progress-bar--tiktok',
-  'WhatsApp':      'progress-bar--whatsapp',
-  'Mercado Libre': 'progress-bar--mercadolibre',
-  'Recomendación': 'progress-bar--recomendacion',
-  'Otro':          'progress-bar--otro',
-  'Sin datos':     'progress-bar--otro',
+const SOURCE_COLORS = {
+  'Instagram':     '#e1306c',
+  'Facebook':      '#1877f2',
+  'TikTok':        '#010101',
+  'WhatsApp':      '#25d366',
+  'Mercado Libre': '#ffe600',
+  'Recomendación': '#7c3aed',
+  'Otro':          '#94a3b8',
+  'Sin datos':     '#94a3b8',
 };
 
-function Bar({ label, value, max, sub }) {
-  const pct = max > 0 ? Math.max(4, (value / max) * 100) : 4;
+function LockedCard({ title }) {
   return (
-    <div style={{ marginBottom: 14 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: 12 }}>
-        <span style={{ color: 'var(--text2)', fontWeight: 500 }}>{label}</span>
-        <span style={{ fontWeight: 700, color: 'var(--text)', fontSize: 12 }}>{sub}</span>
+    <div className="card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '48px 24px', gap: 12, minHeight: 280 }}>
+      <div style={{ width: 52, height: 52, borderRadius: 16, background: 'var(--bg3)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 4 }}>
+        <Lock size={22} color="var(--text3)" />
       </div>
-      <div className="progress-wrap">
-        <div className="progress-bar progress-bar--default" style={{ width: `${pct}%` }} />
+      <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>{title}</div>
+      <p style={{ fontSize: 13, color: 'var(--text3)', margin: 0, lineHeight: 1.6, maxWidth: 220 }}>
+        Disponible en el plan <strong>Pyme</strong> o <strong>Empresa</strong>
+      </p>
+      <span style={{ fontSize: 11, background: 'var(--primary-bg)', color: 'var(--primary)', padding: '5px 16px', borderRadius: 20, fontWeight: 700, border: '1px solid rgba(13,110,253,0.2)' }}>
+        Pyme+
+      </span>
+    </div>
+  );
+}
+
+// Gráfico de barras vertical — ganancias por mes
+function BarChart({ data }) {
+  const max = Math.max(...data.map(d => d.profit), 1);
+  const [hovered, setHovered] = useState(null);
+  const H = 160;
+
+  if (data.length === 0) return <p style={{ color: 'var(--text3)', fontSize: 13, textAlign: 'center', padding: '40px 0' }}>Sin datos todavía</p>;
+
+  return (
+    <div style={{ position: 'relative' }}>
+      {hovered !== null && (
+        <div style={{
+          position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
+          background: 'var(--bg-card)', border: '1px solid var(--border)',
+          borderRadius: 10, padding: '8px 14px', fontSize: 12,
+          boxShadow: 'var(--shadow-md)', zIndex: 10, whiteSpace: 'nowrap', pointerEvents: 'none',
+        }}>
+          <div style={{ fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>{data[hovered]?.label}</div>
+          <div style={{ color: 'var(--primary)', fontWeight: 700 }}>Ganancia: {fmt(data[hovered]?.profit)}</div>
+          <div style={{ color: 'var(--text3)', fontSize: 11 }}>Ingresos: {fmt(data[hovered]?.revenue)} · {data[hovered]?.count} ventas</div>
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', height: H + 28, paddingTop: 48 }}>
+        {data.map((m, i) => {
+          const h = Math.max(8, (m.profit / max) * H);
+          const isHov = hovered === i;
+          return (
+            <div key={m.key} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, cursor: 'pointer' }}
+              onMouseEnter={() => setHovered(i)}
+              onMouseLeave={() => setHovered(null)}>
+              <div style={{
+                width: '100%', height: h, borderRadius: '6px 6px 3px 3px',
+                background: isHov
+                  ? 'linear-gradient(180deg, #3d8bfd, #0d6efd)'
+                  : 'linear-gradient(180deg, rgba(13,110,253,0.7), rgba(13,110,253,0.4))',
+                transition: 'all 0.2s ease',
+                transform: isHov ? 'scaleY(1.03)' : 'scaleY(1)',
+                transformOrigin: 'bottom',
+                position: 'relative', overflow: 'hidden',
+              }}>
+                {isHov && (
+                  <div style={{ position: 'absolute', top: 0, left: '-60%', width: '40%', height: '100%', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)', animation: 'shimmer 1s' }} />
+                )}
+              </div>
+              <span style={{ fontSize: 9, color: isHov ? 'var(--primary)' : 'var(--text3)', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                {m.label.split(' ')[0]}
+              </span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 }
 
-function LockedCard({ title, icon: Icon }) {
+// Gráfico de dona — origen de clientes
+function DonutChart({ data, total }) {
+  const [hovered, setHovered] = useState(null);
+  const r = 70, cx = 90, cy = 90, stroke = 22;
+  const circumference = 2 * Math.PI * r;
+
+  if (data.length === 0) return <p style={{ color: 'var(--text3)', fontSize: 13, textAlign: 'center', padding: '40px 0' }}>Sin datos todavía</p>;
+
+  let offset = 0;
+  const segments = data.map((d, i) => {
+    const pct = d.count / total;
+    const dash = pct * circumference;
+    const gap = circumference - dash;
+    const seg = { ...d, dash, gap, offset, pct, color: SOURCE_COLORS[d.source] || '#94a3b8' };
+    offset += dash;
+    return seg;
+  });
+
+  const hov = hovered !== null ? segments[hovered] : null;
+
   return (
-    <div className="card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '40px 24px', gap: 12 }}>
-      <div style={{ width: 48, height: 48, borderRadius: 14, background: 'var(--bg3)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 4 }}>
-        <Lock size={20} color="var(--text3)" />
+    <div style={{ display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' }}>
+      <div style={{ position: 'relative', flexShrink: 0 }}>
+        <svg width={180} height={180} style={{ overflow: 'visible' }}>
+          {segments.map((seg, i) => (
+            <circle key={i}
+              cx={cx} cy={cy} r={r}
+              fill="none"
+              stroke={seg.color}
+              strokeWidth={hovered === i ? stroke + 3 : stroke}
+              strokeDasharray={`${seg.dash} ${seg.gap}`}
+              strokeDashoffset={-seg.offset + circumference / 4}
+              strokeLinecap="round"
+              style={{ cursor: 'pointer', transition: 'stroke-width 0.2s', opacity: hovered !== null && hovered !== i ? 0.4 : 1 }}
+              onMouseEnter={() => setHovered(i)}
+              onMouseLeave={() => setHovered(null)}
+            />
+          ))}
+          <text x={cx} y={cy - 8} textAnchor="middle" style={{ fontSize: 20, fontWeight: 800, fill: 'var(--text)', fontFamily: 'Space Grotesk, sans-serif' }}>
+            {hov ? Math.round(hov.pct * 100) + '%' : total}
+          </text>
+          <text x={cx} y={cy + 12} textAnchor="middle" style={{ fontSize: 10, fill: 'var(--text3)', fontFamily: 'Inter, sans-serif' }}>
+            {hov ? hov.source : 'ventas'}
+          </text>
+        </svg>
       </div>
-      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{title}</div>
-      <p style={{ fontSize: 12, color: 'var(--text3)', margin: 0, lineHeight: 1.6 }}>
-        Disponible en el plan <strong>Pyme</strong> o <strong>Empresa</strong>
-      </p>
-      <span style={{ fontSize: 11, background: 'var(--primary-bg)', color: 'var(--primary)', padding: '4px 14px', borderRadius: 20, fontWeight: 600, border: '1px solid rgba(13,110,253,0.2)' }}>
-        Pyme+
-      </span>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8, minWidth: 120 }}>
+        {segments.map((seg, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', opacity: hovered !== null && hovered !== i ? 0.4 : 1, transition: 'opacity 0.2s' }}
+            onMouseEnter={() => setHovered(i)}
+            onMouseLeave={() => setHovered(null)}>
+            <div style={{ width: 10, height: 10, borderRadius: 3, background: seg.color, flexShrink: 0 }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{seg.source}</div>
+            </div>
+            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text2)' }}>{seg.count} · {Math.round(seg.pct * 100)}%</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Gráfico de barras horizontal — modelos más vendidos
+function HorizontalBars({ data }) {
+  const max = data[0]?.[1]?.count || 1;
+  const [hovered, setHovered] = useState(null);
+
+  if (data.length === 0) return <p style={{ color: 'var(--text3)', fontSize: 13 }}>Sin datos todavía</p>;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {data.map(([model, d], i) => {
+        const pct = Math.max(6, (d.count / max) * 100);
+        const isHov = hovered === i;
+        return (
+          <div key={model} style={{ cursor: 'pointer' }}
+            onMouseEnter={() => setHovered(i)}
+            onMouseLeave={() => setHovered(null)}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{
+                  width: 22, height: 22, borderRadius: 6, flexShrink: 0,
+                  background: i === 0 ? 'var(--primary)' : 'var(--bg3)',
+                  color: i === 0 ? '#fff' : 'var(--text3)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 10, fontWeight: 800,
+                }}>
+                  {i + 1}
+                </div>
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{model}</span>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <span style={{ fontSize: 13, fontWeight: 800, color: i === 0 ? 'var(--primary)' : 'var(--text)' }}>{d.count}</span>
+                <span style={{ fontSize: 10, color: 'var(--text3)', marginLeft: 4 }}>un.</span>
+              </div>
+            </div>
+            <div style={{ height: 8, background: 'var(--bg3)', borderRadius: 20, overflow: 'hidden' }}>
+              <div style={{
+                height: '100%', width: `${pct}%`, borderRadius: 20,
+                background: i === 0
+                  ? 'linear-gradient(90deg, #0d6efd, #3d8bfd)'
+                  : isHov
+                  ? 'linear-gradient(90deg, var(--primary), #3d8bfd)'
+                  : 'linear-gradient(90deg, var(--border2), var(--border))',
+                transition: 'all 0.3s ease',
+                position: 'relative', overflow: 'hidden',
+              }}>
+                <div style={{ position: 'absolute', top: 0, left: '-60%', width: '40%', height: '100%', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)', animation: 'shimmer 2s infinite' }} />
+              </div>
+            </div>
+            {isHov && (
+              <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 3 }}>
+                Ganancia: {fmt(d.profit)}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -86,18 +248,7 @@ export default function Stats() {
     byModel[model].revenue += Number(s.salePrice || 0);
     byModel[model].profit += Number(s.salePrice || 0) - Number(s.costPrice || 0);
   });
-  const modelRanking = Object.entries(byModel).sort((a, b) => b[1].count - a[1].count).slice(0, 6);
-  const maxCount = modelRanking[0]?.[1]?.count || 1;
-
-  // Formas de pago
-  const byPayment = {};
-  completed.forEach(s => {
-    const m = s.paymentMethod || 'Otro';
-    if (!byPayment[m]) byPayment[m] = 0;
-    byPayment[m]++;
-  });
-  const paymentList = Object.entries(byPayment).sort((a, b) => b[1] - a[1]);
-  const maxPayment = paymentList[0]?.[1] || 1;
+  const modelRanking = Object.entries(byModel).sort((a, b) => b[1].count - a[1].count).slice(0, 5);
 
   // Origen de clientes
   const bySource = {};
@@ -106,7 +257,7 @@ export default function Stats() {
     if (!bySource[src]) bySource[src] = 0;
     bySource[src]++;
   });
-  const sourceList = Object.entries(bySource).sort((a, b) => b[1] - a[1]);
+  const sourceList = Object.entries(bySource).sort((a, b) => b[1] - a[1]).map(([source, count]) => ({ source, count }));
 
   // Ganancias por mes
   const byMonth = {};
@@ -120,28 +271,13 @@ export default function Stats() {
     byMonth[key].profit += Number(s.salePrice || 0) - Number(s.costPrice || 0);
   });
 
-  expenses.forEach(e => {
-    if (!e.date) return;
-    const key = e.date.slice(0, 7);
-    if (byMonth[key]) {
-      byMonth[key].gastos = (byMonth[key].gastos || 0) + Number(e.amount || 0);
-    }
-  });
-
   const monthList = Object.entries(byMonth)
     .sort((a, b) => a[0].localeCompare(b[0]))
     .slice(-6)
     .map(([key, data]) => {
       const [year, month] = key.split('-');
-      return {
-        key,
-        label: `${MONTH_NAMES[Number(month) - 1]} ${year}`,
-        ...data,
-        neta: data.profit - (data.gastos || 0),
-      };
+      return { key, label: `${MONTH_NAMES[Number(month) - 1]} ${year.slice(2)}`, ...data };
     });
-
-  const maxProfit = Math.max(...monthList.map(m => m.profit), 1);
 
   return (
     <>
@@ -150,8 +286,8 @@ export default function Stats() {
       </div>
       <div className="page-body fade-up">
 
-        {/* KPIs — disponibles para todos */}
-        <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(4,1fr)' }}>
+        {/* KPIs */}
+        <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(4,1fr)', marginBottom: 20 }}>
           <div className="stat-card">
             <div className="stat-icon"><DollarSign size={16} /></div>
             <div className="stat-label">Ingresos totales</div>
@@ -162,7 +298,7 @@ export default function Stats() {
             <div className="stat-icon"><TrendingUp size={16} /></div>
             <div className="stat-label">Ganancia bruta</div>
             <div className="stat-value" style={{ fontSize: 19 }}>{fmt(gananciaBruta)}</div>
-            <div className="stat-sub">Margen: {margenProm}%</div>
+            <div className="stat-sub">Margen {margenProm}%</div>
           </div>
           <div className="stat-card">
             <div className="stat-icon"><BarChart2 size={16} /></div>
@@ -178,171 +314,64 @@ export default function Stats() {
           </div>
         </div>
 
-        {/* GANANCIAS POR MES — solo Pyme y Empresa */}
-        {isBasic ? (
-          <div className="card" style={{ marginBottom: 16, textAlign: 'center', padding: '40px 24px' }}>
-            <div style={{ width: 48, height: 48, borderRadius: 14, background: 'var(--bg3)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
-              <Lock size={20} color="var(--text3)" />
-            </div>
-            <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>Estadísticas mensuales</h3>
-            <p style={{ fontSize: 13, color: 'var(--text3)', marginBottom: 16, maxWidth: 360, margin: '0 auto 16px' }}>
-              El desglose mensual de ingresos, costos y ganancias está disponible en el plan Pyme o Empresa.
-            </p>
-            <span style={{ fontSize: 11, background: 'var(--primary-bg)', color: 'var(--primary)', padding: '4px 14px', borderRadius: 20, fontWeight: 600, border: '1px solid rgba(13,110,253,0.2)' }}>
-              Disponible en Pyme+
-            </span>
-          </div>
-        ) : (
-          <div className="card" style={{ marginBottom: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-              <div>
-                <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>Ganancias por mes</h3>
-                <p style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>Últimos 6 meses · Ingresos, ganancia bruta y neta</p>
-              </div>
-              <div style={{ width: 32, height: 32, borderRadius: 10, background: 'var(--primary-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <TrendingUp size={15} color="var(--primary)" />
-              </div>
-            </div>
+        {/* FILA 1 — Ganancias por mes + Origen clientes */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 16, marginBottom: 16 }}>
 
-            {monthList.length > 0 && (
-              <div style={{ display: 'flex', gap: 8, margin: '16px 0', alignItems: 'flex-end', height: 60 }}>
-                {monthList.map(m => {
-                  const h = Math.max(8, (m.profit / maxProfit) * 60);
-                  return (
-                    <div key={m.key} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                      <div style={{ width: '100%', height: h, borderRadius: 6, background: 'var(--primary)', opacity: 0.85, transition: 'height 0.6s ease', position: 'relative', overflow: 'hidden' }}>
-                        <div style={{ position: 'absolute', top: 0, left: '-60%', width: '40%', height: '100%', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)', animation: 'shimmer 2s infinite' }} />
-                      </div>
-                      <span style={{ fontSize: 9, color: 'var(--text3)', fontWeight: 600, whiteSpace: 'nowrap' }}>{m.label.split(' ')[0]}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {monthList.length === 0
-              ? <p style={{ color: 'var(--text3)', fontSize: 13, marginTop: 16 }}>Sin datos todavía</p>
-              : (
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr style={{ background: 'var(--bg2)', borderRadius: 8 }}>
-                        {['Mes', 'Ventas', 'Ingresos', 'Costos', 'Gan. Bruta', 'Gastos', 'Gan. Neta', 'Margen'].map(h => (
-                          <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--text3)', whiteSpace: 'nowrap', borderBottom: '1px solid var(--border)' }}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {monthList.map((m, idx) => {
-                        const margen = m.revenue > 0 ? ((m.profit / m.revenue) * 100).toFixed(1) : 0;
-                        const isLast = idx === monthList.length - 1;
-                        return (
-                          <tr key={m.key} style={{ borderBottom: '1px solid var(--border)', background: isLast ? 'var(--primary-bg)' : 'transparent', transition: 'background 0.15s' }}
-                            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg2)'}
-                            onMouseLeave={e => e.currentTarget.style.background = isLast ? 'var(--primary-bg)' : 'transparent'}>
-                            <td style={{ padding: '11px 14px', fontWeight: 700, fontSize: 13, color: isLast ? 'var(--primary)' : 'var(--text)' }}>{m.label}</td>
-                            <td style={{ padding: '11px 14px', fontSize: 13, fontWeight: 600 }}>{m.count}</td>
-                            <td style={{ padding: '11px 14px', fontSize: 13, fontWeight: 600 }}>{fmt(m.revenue)}</td>
-                            <td style={{ padding: '11px 14px', fontSize: 12, color: 'var(--text3)' }}>{fmt(m.costs)}</td>
-                            <td style={{ padding: '11px 14px', fontSize: 13, fontWeight: 600, color: 'var(--primary)' }}>{fmt(m.profit)}</td>
-                            <td style={{ padding: '11px 14px', fontSize: 12, color: 'var(--text3)' }}>{fmt(m.gastos || 0)}</td>
-                            <td style={{ padding: '11px 14px', fontSize: 14, fontWeight: 800, color: 'var(--primary)' }}>{fmt(m.neta)}</td>
-                            <td style={{ padding: '11px 14px', fontSize: 12 }}>
-                              <span style={{ background: 'var(--primary-bg)', color: 'var(--primary)', padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>{margen}%</span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )
-            }
-          </div>
-        )}
-
-        <div className="stats-cols" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 4 }}>
-
-          {/* Modelos más vendidos — solo Pyme y Empresa */}
+          {/* Ganancias por mes */}
           {isBasic ? (
-            <LockedCard title="Modelos más vendidos" icon={TrendingUp} />
+            <LockedCard title="Ganancias por mes" />
           ) : (
             <div className="card">
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-                <h3 style={{ fontSize: 15, fontWeight: 700 }}>Modelos más vendidos</h3>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                <div>
+                  <h3 style={{ fontSize: 15, fontWeight: 700 }}>Ganancias por mes</h3>
+                  <p style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>Últimos {monthList.length} meses</p>
+                </div>
                 <div style={{ width: 32, height: 32, borderRadius: 10, background: 'var(--primary-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <TrendingUp size={15} color="var(--primary)" />
                 </div>
               </div>
-              {modelRanking.length === 0
-                ? <p style={{ color: 'var(--text3)', fontSize: 13 }}>Sin datos todavía</p>
-                : modelRanking.map(([model, data]) => (
-                  <Bar key={model} label={model} value={data.count} max={maxCount} sub={`${data.count} un. · ${fmt(data.profit)}`} />
-                ))
-              }
+              <BarChart data={monthList} />
             </div>
           )}
 
-          {/* Origen de clientes — disponible para todos */}
+          {/* Origen de clientes — dona */}
           <div className="card">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-              <h3 style={{ fontSize: 15, fontWeight: 700 }}>Origen de clientes</h3>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <div>
+                <h3 style={{ fontSize: 15, fontWeight: 700 }}>Origen de clientes</h3>
+                <p style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>{completed.length} ventas totales</p>
+              </div>
               <div style={{ width: 32, height: 32, borderRadius: 10, background: 'var(--primary-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <BarChart2 size={15} color="var(--primary)" />
+                <Users size={15} color="var(--primary)" />
               </div>
             </div>
-            {sourceList.length === 0
-              ? <p style={{ color: 'var(--text3)', fontSize: 13 }}>Sin datos todavía</p>
-              : sourceList.map(([source, count]) => {
-                const pct = completed.length > 0 ? Math.round((count / completed.length) * 100) : 0;
-                const barClass = SOURCE_BAR_CLASS[source] || 'progress-bar--default';
-                return (
-                  <div key={source} style={{ marginBottom: 16 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 7 }}>
-                      <SourceLabel source={source} />
-                      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text2)' }}>{count} · {pct}%</span>
-                    </div>
-                    <div className="progress-wrap">
-                      <div className={`progress-bar ${barClass}`} style={{ width: `${Math.max(pct, 4)}%` }} />
-                    </div>
-                  </div>
-                );
-              })
-            }
+            <DonutChart data={sourceList} total={completed.length} />
           </div>
+        </div>
 
-          {/* Formas de pago — solo Pyme y Empresa */}
+        {/* FILA 2 — Modelos más vendidos + Resumen financiero */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+
+          {/* Modelos más vendidos */}
           {isBasic ? (
-            <LockedCard title="Formas de pago" icon={ShoppingCart} />
+            <LockedCard title="Modelos más vendidos" />
           ) : (
             <div className="card">
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-                <h3 style={{ fontSize: 15, fontWeight: 700 }}>Formas de pago</h3>
+                <div>
+                  <h3 style={{ fontSize: 15, fontWeight: 700 }}>Modelos más vendidos</h3>
+                  <p style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>Top {modelRanking.length} productos</p>
+                </div>
                 <div style={{ width: 32, height: 32, borderRadius: 10, background: 'var(--primary-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <ShoppingCart size={15} color="var(--primary)" />
+                  <BarChart2 size={15} color="var(--primary)" />
                 </div>
               </div>
-              {paymentList.length === 0
-                ? <p style={{ color: 'var(--text3)', fontSize: 13 }}>Sin datos todavía</p>
-                : paymentList.map(([method, count]) => {
-                  const pct = completed.length > 0 ? Math.round((count / completed.length) * 100) : 0;
-                  return (
-                    <div key={method} style={{ marginBottom: 16 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 7 }}>
-                        <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text2)' }}>{method}</span>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text2)' }}>{count} · {pct}%</span>
-                      </div>
-                      <div className="progress-wrap">
-                        <div className="progress-bar progress-bar--default" style={{ width: `${Math.max(pct, 4)}%` }} />
-                      </div>
-                    </div>
-                  );
-                })
-              }
+              <HorizontalBars data={modelRanking} />
             </div>
           )}
 
-          {/* Resumen financiero — disponible para todos */}
+          {/* Resumen financiero */}
           <div className="card">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
               <h3 style={{ fontSize: 15, fontWeight: 700 }}>Resumen financiero</h3>
@@ -352,19 +381,23 @@ export default function Stats() {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               {[
-                { label: 'Total ingresos (ventas)', value: fmt(totalIngresos) },
-                { label: 'Total costos (equipos)', value: `− ${fmt(totalCostos)}` },
+                { label: 'Ingresos totales', value: fmt(totalIngresos) },
+                { label: 'Costos de equipos', value: `− ${fmt(totalCostos)}` },
                 { label: 'Ganancia bruta', value: fmt(gananciaBruta), highlight: true },
-                { label: 'Total gastos operativos', value: `− ${fmt(totalGastos)}` },
+                { label: 'Gastos operativos', value: `− ${fmt(totalGastos)}` },
               ].map((row, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: row.highlight ? '2px solid var(--primary)' : '1px solid var(--border)', fontSize: 13 }}>
-                  <span style={{ color: 'var(--text3)', fontWeight: 500 }}>{row.label}</span>
-                  <span style={{ fontWeight: 700, color: row.highlight ? 'var(--primary)' : 'var(--text)' }}>{row.value}</span>
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: row.highlight ? '2px solid var(--primary)' : '1px solid var(--border)' }}>
+                  <span style={{ fontSize: 13, color: 'var(--text3)', fontWeight: 500 }}>{row.label}</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: row.highlight ? 'var(--primary)' : 'var(--text)' }}>{row.value}</span>
                 </div>
               ))}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 0 0' }}>
-                <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>GANANCIA NETA</span>
-                <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--primary)' }}>{fmt(gananciaNeta)}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px 0 4px' }}>
+                <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>GANANCIA NETA</span>
+                <span style={{ fontSize: 24, fontWeight: 800, color: 'var(--primary)', fontFamily: 'Space Grotesk, sans-serif' }}>{fmt(gananciaNeta)}</span>
+              </div>
+              <div style={{ marginTop: 16, padding: '12px 16px', background: 'var(--primary-bg)', borderRadius: 10, border: '1px solid rgba(13,110,253,0.15)', display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 12, color: 'var(--primary)', fontWeight: 600 }}>Margen promedio</span>
+                <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--primary)' }}>{margenProm}%</span>
               </div>
             </div>
           </div>
