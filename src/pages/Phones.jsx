@@ -16,6 +16,8 @@ const CATEGORIES = {
     'iPhone 14', 'iPhone 14 Plus', 'iPhone 14 Pro', 'iPhone 14 Pro Max',
     'iPhone 15', 'iPhone 15 Plus', 'iPhone 15 Pro', 'iPhone 15 Pro Max',
     'iPhone 16', 'iPhone 16 Plus', 'iPhone 16 Pro', 'iPhone 16 Pro Max',
+    'iPhone 17', 'iPhone 17 Plus', 'iPhone 17 Pro', 'iPhone 17 Pro Max',
+    'iPhone 18', 'iPhone 18 Plus', 'iPhone 18 Pro', 'iPhone 18 Pro Max',
   ],
   'Samsung': [
     'Samsung Galaxy A05', 'Samsung Galaxy A15', 'Samsung Galaxy A25', 'Samsung Galaxy A35', 'Samsung Galaxy A55',
@@ -23,8 +25,9 @@ const CATEGORIES = {
     'Samsung Galaxy S23', 'Samsung Galaxy S23+', 'Samsung Galaxy S23 Ultra',
     'Samsung Galaxy S24', 'Samsung Galaxy S24+', 'Samsung Galaxy S24 Ultra',
     'Samsung Galaxy S25', 'Samsung Galaxy S25+', 'Samsung Galaxy S25 Ultra',
-    'Samsung Galaxy Z Fold 5', 'Samsung Galaxy Z Fold 6',
-    'Samsung Galaxy Z Flip 5', 'Samsung Galaxy Z Flip 6',
+    'Samsung Galaxy S26', 'Samsung Galaxy S26+', 'Samsung Galaxy S26 Ultra',
+    'Samsung Galaxy Z Fold 5', 'Samsung Galaxy Z Fold 6', 'Samsung Galaxy Z Fold 7',
+    'Samsung Galaxy Z Flip 5', 'Samsung Galaxy Z Flip 6', 'Samsung Galaxy Z Flip 7',
   ],
   'Motorola': [
     'Motorola Moto G04', 'Motorola Moto G14', 'Motorola Moto G24', 'Motorola Moto G34', 'Motorola Moto G54', 'Motorola Moto G84',
@@ -90,9 +93,16 @@ const CATEGORIES = {
     'Battery Pack MagSafe Original', 'Battery Pack MagSafe Replica',
     'Battery Pack USB-C 5000mAh', 'Battery Pack USB-C 10000mAh', 'Battery Pack USB-C 20000mAh',
   ],
+  'Funda': [
+    'Funda iPhone', 'Funda Samsung', 'Funda Motorola', 'Funda Xiaomi', 'Funda Universal',
+    'Funda con MagSafe', 'Funda antigolpe', 'Funda billetera',
+  ],
+  'Vidrio Templado': [
+    'Vidrio Templado iPhone', 'Vidrio Templado Samsung', 'Vidrio Templado Motorola',
+    'Vidrio Templado Xiaomi', 'Vidrio Templado Universal',
+    'Vidrio Templado Privacidad', 'Vidrio Templado Curvo',
+  ],
   'Accesorio': [
-    'Funda iPhone', 'Funda Samsung', 'Funda Universal',
-    'Vidrio Templado iPhone', 'Vidrio Templado Samsung', 'Vidrio Templado Universal',
     'Soporte Auto', 'Soporte Escritorio',
     'Mouse Inalámbrico', 'Teclado Inalámbrico',
     'Hub USB-C', 'Adaptador',
@@ -108,16 +118,13 @@ const CAT_ICON = {
   'iPhone': '📱', 'Samsung': '📱', 'Motorola': '📱', 'Xiaomi': '📱',
   'Apple Watch': '⌚', 'AirPods': '🎧', 'Tablet': '📟',
   'Computadora': '💻', 'Parlante': '🔊', 'Auriculares': '🎧',
-  'Cargador': '🔌', 'Battery Pack': '🔋', 'Accesorio': '🧩', 'Otro': '📦',
+  'Cargador': '🔌', 'Battery Pack': '🔋', 'Funda': '🛡️',
+  'Vidrio Templado': '🔲', 'Accesorio': '🧩', 'Otro': '📦',
 };
 
-// Categorías que necesitan IMEI
 const NEEDS_IMEI = ['iPhone', 'Samsung', 'Motorola', 'Xiaomi'];
-// Categorías que muestran almacenamiento
 const NEEDS_STORAGE = ['iPhone', 'Samsung', 'Motorola', 'Xiaomi', 'Apple Watch', 'AirPods', 'Tablet', 'Computadora'];
-// Categorías que muestran batería
 const NEEDS_BATTERY = ['iPhone', 'Samsung', 'Motorola', 'Xiaomi', 'Apple Watch'];
-// Categorías que son unitarias (sin cantidad)
 const IS_UNIQUE = ['iPhone', 'Samsung', 'Motorola', 'Xiaomi', 'Computadora'];
 
 const getCategory = (model) => {
@@ -214,8 +221,6 @@ function Modal({ phone, onClose, onSave, saving }) {
   const needsImei = NEEDS_IMEI.includes(form.category);
   const showQuantity = needsQuantity(form.category);
 
-  const displayModel = useCustomModel ? form.customModel : form.model;
-
   const margen = form.salePrice && form.costPrice
     ? (((Number(form.salePrice) - Number(form.costPrice)) / Number(form.costPrice)) * 100).toFixed(1)
     : null;
@@ -238,7 +243,6 @@ function Modal({ phone, onClose, onSave, saving }) {
         <div className="modal-body">
           <PhotoUploader value={form.photo} onChange={v => set('photo', v)} />
 
-          {/* Categoría */}
           <div className="form-group" style={{ marginTop: 14 }}>
             <label className="form-label">Categoría</label>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -252,7 +256,6 @@ function Modal({ phone, onClose, onSave, saving }) {
             </div>
           </div>
 
-          {/* Modelo */}
           <div className="form-grid form-grid-2">
             <div className="form-group">
               <label className="form-label">Modelo</label>
@@ -300,7 +303,6 @@ function Modal({ phone, onClose, onSave, saving }) {
             </div>
           </div>
 
-          {/* Cantidad */}
           {showQuantity && (
             <div style={{ background: 'var(--bg3)', borderRadius: 10, padding: '14px 16px', marginBottom: 14 }}>
               <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 12 }}>Cantidad en stock</div>
@@ -313,7 +315,6 @@ function Modal({ phone, onClose, onSave, saving }) {
             </div>
           )}
 
-          {/* Storage, Color, Condición */}
           <div className="form-grid form-grid-3">
             {needsStorage && (
               <div className="form-group">
@@ -337,7 +338,6 @@ function Modal({ phone, onClose, onSave, saving }) {
             </div>
           </div>
 
-          {/* IMEI / Serial / Batería */}
           <div className="form-grid form-grid-2">
             {needsImei ? (
               <div className="form-group">
@@ -358,7 +358,6 @@ function Modal({ phone, onClose, onSave, saving }) {
             )}
           </div>
 
-          {/* Precios */}
           <div style={{ background: 'var(--bg3)', borderRadius: 10, padding: '14px 16px', marginBottom: 14 }}>
             <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 12 }}>Precios</div>
             <div className="form-grid form-grid-3">
@@ -463,8 +462,6 @@ export default function Phones() {
 
   const labelStatus = { disponible: 'Disponible', vendido: 'Vendido', reservado: 'Reservado', reparacion: 'Reparación' };
   const totalUnidades = phones.filter(p => p.status === 'disponible').reduce((a, p) => a + (Number(p.quantity) || 1), 0);
-
-  // Categorías que tienen productos en stock para los filtros
   const catsEnUso = ['todas', ...new Set(phones.map(p => p.category || getCategory(p.model)))];
 
   return (
@@ -478,7 +475,6 @@ export default function Phones() {
       </div>
       <div className="page-body fade-up">
 
-        {/* Filtros por categoría — solo muestra las que tienen productos */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
           {catsEnUso.map(cat => (
             <button key={cat} className={`btn btn-sm ${filterCat === cat ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setFilterCat(cat)}>
