@@ -394,7 +394,7 @@ export default function Sales() {
             <Download size={15} /> Exportar Excel
             {!limits.canExportExcel && <span style={{ fontSize: 10, marginLeft: 4, background: '#d97706', color: '#fff', padding: '1px 6px', borderRadius: 10 }}>Pyme+</span>}
           </button>
-          <button className="btn btn-primary" onClick={() => setModal('new')}><Plus size={15} /> Registrar venta</button>
+           <button className="btn btn-primary" id="onboarding-add-sale" onClick={() => setModal('new')}><Plus size={15} /> Registrar venta</button>
         </div>
       </div>
 

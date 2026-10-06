@@ -7,11 +7,12 @@ const AppContext = createContext(null);
 export const useApp = () => useContext(AppContext);
 
 export function AppProvider({ user, children }) {
-  const [profile, setProfile]       = useState(null);
-  const [business, setBusiness]     = useState(null);
-  const [loading, setLoading]       = useState(true);
-  const [subStatus, setSubStatus]   = useState(null); // trial | active | suspended | pending_payment
-  const [trialDays, setTrialDays]   = useState(null);
+  const [profile, setProfile]           = useState(null);
+  const [business, setBusiness]         = useState(null);
+  const [loading, setLoading]           = useState(true);
+  const [subStatus, setSubStatus]       = useState(null);
+  const [trialDays, setTrialDays]       = useState(null);
+  const [isNewBusiness, setIsNewBusiness] = useState(false);
 
   useEffect(() => {
     if (!user) { setLoading(false); return; }
@@ -22,8 +23,10 @@ export function AppProvider({ user, children }) {
     setLoading(true);
     try {
       let prof = await getUserProfile(user.uid);
+      let freshBusiness = false;
 
       if (!prof) {
+        freshBusiness = true;
         const businessId = user.uid;
         prof = {
           id: user.uid,
@@ -45,22 +48,30 @@ export function AppProvider({ user, children }) {
           address: '',
           primaryColor: '#0d6efd',
           status: 'trial',
+          onboardingCompleted: false,
         });
       }
 
       setProfile(prof);
+
       // Bloquear usuario desactivado
-if (prof.active === false) {
-  const { logout } = await import('../firebase');
-  await logout();
-  return;
-}
+      if (prof.active === false) {
+        const { logout } = await import('../firebase');
+        await logout();
+        return;
+      }
+
       setBusinessId(prof.businessId);
 
       const biz = await getBusinessConfig(prof.businessId);
       setBusiness(biz);
 
-      // Verificar estado de suscripción via Cloud Function
+      // Determinar si es negocio nuevo (onboarding no completado)
+      if (freshBusiness || biz?.onboardingCompleted === false) {
+        setIsNewBusiness(true);
+      }
+
+      // Verificar estado de suscripción
       try {
         const functions = getFunctions(undefined, 'us-central1');
         const getStatus = httpsCallable(functions, 'getBusinessStatus');
@@ -68,7 +79,6 @@ if (prof.active === false) {
         setSubStatus(result.data.status);
         setTrialDays(result.data.trialDaysLeft);
       } catch (e) {
-        // Si falla la función, leemos el estado directo de Firestore como fallback
         setSubStatus(biz?.status || 'trial');
         setTrialDays(null);
       }
@@ -96,6 +106,7 @@ if (prof.active === false) {
     <AppContext.Provider value={{
       profile, business, loading,
       subStatus, trialDays,
+      isNewBusiness, setIsNewBusiness,
       refreshBusiness, refreshProfile,
     }}>
       {children}

@@ -99,7 +99,7 @@ export default function Sidebar({ page, onNavigate, onLogout, className = '', bu
         <nav className="sidebar-nav">
           <div className="nav-section-label">Menú</div>
           {NAV.map(({ id, label, icon: Icon }) => (
-            <button key={id} className={`nav-item ${page === id ? 'active' : ''}`} onClick={() => onNavigate(id)}>
+            <button key={id} id={`nav-item-${id}`} className={`nav-item ${page === id ? 'active' : ''}`} onClick={() => onNavigate(id)}>
               <Icon size={16} />
               {label}
               {id === 'phones' && alertCount > 0 && business?.plan !== 'emprendedor' && (
@@ -114,7 +114,7 @@ export default function Sidebar({ page, onNavigate, onLogout, className = '', bu
           {isAdmin && !isSuperAdmin && (
             <>
               <div className="nav-section-label" style={{ marginTop: 8 }}>Admin</div>
-              <button className={`nav-item ${page === 'settings' ? 'active' : ''}`} onClick={() => onNavigate('settings')}>
+              <button id="nav-item-settings" className={`nav-item ${page === 'settings' ? 'active' : ''}`} onClick={() => onNavigate('settings')}>
                 <Settings size={16} /> Configuración
               </button>
             </>
@@ -124,7 +124,7 @@ export default function Sidebar({ page, onNavigate, onLogout, className = '', bu
           {isSuperAdmin && (
             <>
               <div className="nav-section-label" style={{ marginTop: 8 }}>Genesys</div>
-              <button className={`nav-item ${page === 'settings' ? 'active' : ''}`} onClick={() => onNavigate('settings')}>
+              <button id="nav-item-settings" className={`nav-item ${page === 'settings' ? 'active' : ''}`} onClick={() => onNavigate('settings')}>
                 <Settings size={16} /> Configuración
               </button>
               <button className={`nav-item ${page === 'admin' ? 'active' : ''}`} onClick={() => onNavigate('admin')}>
@@ -135,8 +135,7 @@ export default function Sidebar({ page, onNavigate, onLogout, className = '', bu
         </nav>
 
         {/* Alertas stock bajo — solo Pyme y Empresa */}
-      {/* Alertas stock bajo — solo Pyme y Empresa */}
-      {alertCount > 0 && business?.plan !== 'emprendedor' && (
+        {alertCount > 0 && business?.plan !== 'emprendedor' && (
           <div style={{ margin: '0 12px 10px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, padding: '10px 12px' }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: '#f87171', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 5 }}>
               <Bell size={11} /> Stock bajo ({alertCount})
@@ -152,7 +151,6 @@ export default function Sidebar({ page, onNavigate, onLogout, className = '', bu
 
         {/* Footer */}
         <div className="sidebar-footer">
-          
           <button className="nav-item" onClick={onLogout} style={{ width: '100%', marginTop: 2 }}>
             <LogOut size={16} /> Cerrar sesión
           </button>

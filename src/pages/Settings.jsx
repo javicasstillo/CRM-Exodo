@@ -359,14 +359,14 @@ export default function Settings() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
             <div className="card">
               <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 18 }}>Información del negocio</h3>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
+             <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }} id="onboarding-logo">
                 <AvatarUploader value={bizForm.logo} onChange={v => setBizForm(f => ({ ...f, logo: v }))} size={72} />
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 600 }}>Logo del negocio</div>
                   <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 3 }}>Se muestra en el sidebar</div>
                 </div>
               </div>
-              <div className="form-group">
+              <div className="form-group" id="onboarding-name">
                 <label className="form-label">Nombre del negocio</label>
                 <input className="form-input" placeholder="Ej: Mi Tienda Tech" value={bizForm.name || ''} onChange={e => setBizForm(f => ({ ...f, name: e.target.value }))} />
               </div>
@@ -403,11 +403,12 @@ export default function Settings() {
                 <label className="form-label">Días de garantía por defecto</label>
                 <input className="form-input" type="number" min="1" value={bizForm.defaultWarrantyDays || 30} onChange={e => setBizForm(f => ({ ...f, defaultWarrantyDays: Number(e.target.value) }))} />
               </div>
-              <div className="form-group">
+              <div className="form-group" id="onboarding-whatsapp">
                 <label className="form-label">WhatsApp para ventas</label>
                 <input className="form-input" placeholder="+5492615551234" value={bizForm.whatsapp || ''} onChange={e => setBizForm(f => ({ ...f, whatsapp: e.target.value }))} />
               </div>
-              <button className="btn btn-primary" disabled={saving} onClick={saveBusiness} style={{ marginTop: 4 }}>
+              <button className="btn btn-primary" disabled={saving} onClick={saveBusiness} style={{ marginTop: 4 }} id="onboarding-save">
+
                 <Save size={14} /> {saving ? 'Guardando...' : 'Guardar cambios'}
               </button>
             </div>

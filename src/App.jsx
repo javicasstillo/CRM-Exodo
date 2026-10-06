@@ -13,6 +13,7 @@ import AdminPanel from './pages/AdminPanel';
 import Catalog from './pages/Catalog';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
+import OnboardingTour from './components/OnboardingTour';
 import { ToastProvider } from './context/ToastContext';
 import { AppProvider, useApp } from './context/AppContext';
 import SubscriptionGate from './components/SubscriptionGate';
@@ -64,22 +65,25 @@ function Skeleton() {
 }
 
 function AppShell({ user }) {
-  const { profile, business, loading: appLoading } = useApp();
+  const { profile, business, loading: appLoading, isNewBusiness, setIsNewBusiness } = useApp();
   const [page, setPage]               = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [pageLoading, setPageLoading] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
+  const [showTour, setShowTour]       = useState(false);
 
   const isSuperAdmin = user?.uid === SUPER_ADMIN_UID;
+
+  // Si es negocio nuevo, ir a settings y mostrar tour
+  useEffect(() => {
+    if (!appLoading && isNewBusiness) {
+      setPage('settings');
+      setShowTour(true);
+    }
+  }, [appLoading, isNewBusiness]);
 
   useEffect(() => {
     document.title = `${PAGE_TITLES[page] || 'Panel'} — ${business?.name || 'Genesys App'}`;
   }, [page, business]);
-
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
-    localStorage.setItem('theme', darkMode ? 'dark' : 'light');
-  }, [darkMode]);
 
   if (appLoading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', flexDirection: 'column', gap: 16, background: 'var(--bg)' }}>
@@ -97,6 +101,19 @@ function AppShell({ user }) {
     setPage(p);
     setSidebarOpen(false);
     setTimeout(() => setPageLoading(false), 350);
+  };
+
+  // El tour usa handleNavigate para moverse entre páginas
+  const handleTourNavigate = (p) => {
+    if (p === page) return;
+    setPage(p);
+    setSidebarOpen(false);
+  };
+
+  const handleTourComplete = () => {
+    setShowTour(false);
+    setIsNewBusiness(false);
+    setPage('dashboard');
   };
 
   return (
@@ -136,6 +153,14 @@ function AppShell({ user }) {
           </SubscriptionGate>
         )}
       </div>
+
+      {/* Tour de onboarding */}
+      {showTour && (
+        <OnboardingTour
+          onComplete={handleTourComplete}
+          onNavigate={handleTourNavigate}
+        />
+      )}
     </div>
   );
 }
@@ -151,9 +176,9 @@ export default function App() {
   }
 
   // ── Ruta pública de invitaciones ──
-if (window.location.pathname.startsWith('/invite/')) {
-  return <ToastProvider><Login /></ToastProvider>;
-}
+  if (window.location.pathname.startsWith('/invite/')) {
+    return <ToastProvider><Login /></ToastProvider>;
+  }
 
   if (user === undefined) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', flexDirection: 'column', gap: 16, background: 'var(--bg)' }}>

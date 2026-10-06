@@ -137,7 +137,7 @@ export default function Buyers() {
     <>
       <div className="page-header">
         <div><h2>Compradores</h2><p>{buyers.length} contactos registrados</p></div>
-        <button className="btn btn-primary" onClick={() => setModal('new')}><Plus size={15} /> Nuevo comprador</button>
+        <button className="btn btn-primary" id="onboarding-add-buyer" onClick={() => setModal('new')}><Plus size={15} /> Nuevo comprador</button>
       </div>
       <div className="page-body fade-up">
         <div className="toolbar">

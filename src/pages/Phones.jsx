@@ -471,7 +471,7 @@ export default function Phones() {
           <h2>Stock</h2>
           <p>{totalUnidades} unidades disponibles · {phones.filter(p => p.status === 'disponible').length} productos distintos</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setModal('new')}><Plus size={15} /> Agregar producto</button>
+        <button className="btn btn-primary" id="onboarding-add-product" onClick={() => setModal('new')}><Plus size={15} /> Agregar producto</button>
       </div>
       <div className="page-body fade-up">
 
