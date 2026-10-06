@@ -316,38 +316,36 @@ export default function Sales() {
   const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const handleSave = async (form) => {
-    setSaving(true);
-    try {
-      if (modal === 'new') {
-        await salesApi.add({
-          ...form,
-          vendedorId: profile?.id || '',
-          vendedorName: profile?.name || '',
-        });
+  setSaving(true);
+  try {
+    if (modal === 'new') {
+      await salesApi.add({
+        ...form,
+        vendedorId: profile?.id || '',
+        vendedorName: profile?.name || '',
+      });
 
-        // ── FIX: descontar 1 unidad en productos con cantidad, marcar vendido si llega a 0 ──
-        if (form.phoneId) {
-          const phone = phones.find(p => p.id === form.phoneId);
-          if (phone) {
-            const qty = Number(phone.quantity) || 1;
-            if (qty > 1) {
-              // Tiene más de 1 unidad: descontar 1 y mantener disponible
-              await phonesApi.update(form.phoneId, { quantity: qty - 1 });
-            } else {
-              // Era la última unidad: marcar como vendido
-              await phonesApi.update(form.phoneId, { status: 'vendido', quantity: 0 });
-            }
+      // Leer el phone directo de Firestore para tener la cantidad real
+      if (form.phoneId) {
+        const phone = await phonesApi.getOne(form.phoneId);
+        if (phone) {
+          const qty = Number(phone.quantity) || 1;
+          if (qty > 1) {
+            await phonesApi.update(form.phoneId, { quantity: qty - 1 });
+          } else {
+            await phonesApi.update(form.phoneId, { status: 'vendido', quantity: 0 });
           }
         }
-
-        toast('Venta registrada correctamente', 'success');
-      } else {
-        await salesApi.update(modal.id, form);
-        toast('Venta actualizada', 'success');
       }
-      setModal(null);
-    } catch (e) { toast(e.message, 'error'); } finally { setSaving(false); }
-  };
+
+      toast('Venta registrada correctamente', 'success');
+    } else {
+      await salesApi.update(modal.id, form);
+      toast('Venta actualizada', 'success');
+    }
+    setModal(null);
+  } catch (e) { toast(e.message, 'error'); } finally { setSaving(false); }
+};
 
   const handleDelete = async (id) => {
     if (!confirm('¿Eliminar esta venta?')) return;
