@@ -7,11 +7,11 @@ const AppContext = createContext(null);
 export const useApp = () => useContext(AppContext);
 
 export function AppProvider({ user, children }) {
-  const [profile, setProfile]           = useState(null);
-  const [business, setBusiness]         = useState(null);
-  const [loading, setLoading]           = useState(true);
-  const [subStatus, setSubStatus]       = useState(null);
-  const [trialDays, setTrialDays]       = useState(null);
+  const [profile, setProfile]             = useState(null);
+  const [business, setBusiness]           = useState(null);
+  const [loading, setLoading]             = useState(true);
+  const [subStatus, setSubStatus]         = useState(null);
+  const [trialDays, setTrialDays]         = useState(null);
   const [isNewBusiness, setIsNewBusiness] = useState(false);
 
   useEffect(() => {
@@ -23,10 +23,10 @@ export function AppProvider({ user, children }) {
     setLoading(true);
     try {
       let prof = await getUserProfile(user.uid);
-      let freshBusiness = false;
 
       if (!prof) {
-        freshBusiness = true;
+        // Usuario completamente nuevo (no debería pasar con la Cloud Function,
+        // pero lo manejamos igual como fallback)
         const businessId = user.uid;
         prof = {
           id: user.uid,
@@ -66,8 +66,9 @@ export function AppProvider({ user, children }) {
       const biz = await getBusinessConfig(prof.businessId);
       setBusiness(biz);
 
-      // Determinar si es negocio nuevo (onboarding no completado)
-      if (freshBusiness || biz?.onboardingCompleted === false) {
+      // Mostrar tour si onboardingCompleted no es true
+      // Esto cubre tanto negocios nuevos como los creados por la Cloud Function
+      if (biz?.onboardingCompleted !== true) {
         setIsNewBusiness(true);
       }
 

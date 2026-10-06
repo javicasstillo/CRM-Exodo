@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, Smartphone, Users, ShoppingCart, TrendingUp, LogOut, DollarSign, Search, X, Bell, Settings, Moon, Sun, Shield } from 'lucide-react';
+import { LayoutDashboard, Smartphone, Users, ShoppingCart, TrendingUp, LogOut, DollarSign, Search, X, Bell, Settings, Shield } from 'lucide-react';
 import { phonesApi } from '../api';
-
-const SUPER_ADMIN_UID = '5aHXAuMsBxPTlmyW9kDSM4tGXNX2';
 
 const NAV = [
   { id: 'dashboard', label: 'Panel',         icon: LayoutDashboard },
@@ -13,7 +11,7 @@ const NAV = [
   { id: 'stats',     label: 'Estadísticas',   icon: TrendingUp },
 ];
 
-export default function Sidebar({ page, onNavigate, onLogout, className = '', business, profile, darkMode, onToggleDark, isSuperAdmin }) {
+export default function Sidebar({ page, onNavigate, onLogout, className = '', business, profile, isSuperAdmin }) {
   const [phones, setPhones]         = useState([]);
   const [searchQ, setSearchQ]       = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
@@ -99,7 +97,11 @@ export default function Sidebar({ page, onNavigate, onLogout, className = '', bu
         <nav className="sidebar-nav">
           <div className="nav-section-label">Menú</div>
           {NAV.map(({ id, label, icon: Icon }) => (
-            <button key={id} id={`nav-item-${id}`} className={`nav-item ${page === id ? 'active' : ''}`} onClick={() => onNavigate(id)}>
+            <button
+              key={id}
+              id={`nav-item-${id}`}
+              className={`nav-item ${page === id ? 'active' : ''}`}
+              onClick={() => onNavigate(id)}>
               <Icon size={16} />
               {label}
               {id === 'phones' && alertCount > 0 && business?.plan !== 'emprendedor' && (
@@ -110,11 +112,14 @@ export default function Sidebar({ page, onNavigate, onLogout, className = '', bu
             </button>
           ))}
 
-          {/* Configuración — solo admin del negocio (no superadmin) */}
+          {/* Configuración — solo admin */}
           {isAdmin && !isSuperAdmin && (
             <>
               <div className="nav-section-label" style={{ marginTop: 8 }}>Admin</div>
-              <button id="nav-item-settings" className={`nav-item ${page === 'settings' ? 'active' : ''}`} onClick={() => onNavigate('settings')}>
+              <button
+                id="nav-item-settings"
+                className={`nav-item ${page === 'settings' ? 'active' : ''}`}
+                onClick={() => onNavigate('settings')}>
                 <Settings size={16} /> Configuración
               </button>
             </>
@@ -124,17 +129,22 @@ export default function Sidebar({ page, onNavigate, onLogout, className = '', bu
           {isSuperAdmin && (
             <>
               <div className="nav-section-label" style={{ marginTop: 8 }}>Genesys</div>
-              <button id="nav-item-settings" className={`nav-item ${page === 'settings' ? 'active' : ''}`} onClick={() => onNavigate('settings')}>
+              <button
+                id="nav-item-settings"
+                className={`nav-item ${page === 'settings' ? 'active' : ''}`}
+                onClick={() => onNavigate('settings')}>
                 <Settings size={16} /> Configuración
               </button>
-              <button className={`nav-item ${page === 'admin' ? 'active' : ''}`} onClick={() => onNavigate('admin')}>
+              <button
+                className={`nav-item ${page === 'admin' ? 'active' : ''}`}
+                onClick={() => onNavigate('admin')}>
                 <Shield size={16} /> Panel Admin
               </button>
             </>
           )}
         </nav>
 
-        {/* Alertas stock bajo — solo Pyme y Empresa */}
+        {/* Alertas stock bajo */}
         {alertCount > 0 && business?.plan !== 'emprendedor' && (
           <div style={{ margin: '0 12px 10px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, padding: '10px 12px' }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: '#f87171', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 5 }}>
