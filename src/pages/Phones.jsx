@@ -197,7 +197,8 @@ function QuantitySelector({ value, onChange }) {
 }
 
 function Modal({ phone, onClose, onSave, saving }) {
-  const [form, setForm] = useState({ quantity: 1, customModel: '', ...phone } || EMPTY);
+  // ── FIX: siempre arrancar desde EMPTY para producto nuevo ──
+  const [form, setForm] = useState(phone ? { ...EMPTY, ...phone } : { ...EMPTY });
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   const handleCategory = (cat) => {

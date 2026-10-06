@@ -324,7 +324,22 @@ export default function Sales() {
           vendedorId: profile?.id || '',
           vendedorName: profile?.name || '',
         });
-        if (form.phoneId) await phonesApi.update(form.phoneId, { status: 'vendido' });
+
+        // ── FIX: descontar 1 unidad en productos con cantidad, marcar vendido si llega a 0 ──
+        if (form.phoneId) {
+          const phone = phones.find(p => p.id === form.phoneId);
+          if (phone) {
+            const qty = Number(phone.quantity) || 1;
+            if (qty > 1) {
+              // Tiene más de 1 unidad: descontar 1 y mantener disponible
+              await phonesApi.update(form.phoneId, { quantity: qty - 1 });
+            } else {
+              // Era la última unidad: marcar como vendido
+              await phonesApi.update(form.phoneId, { status: 'vendido', quantity: 0 });
+            }
+          }
+        }
+
         toast('Venta registrada correctamente', 'success');
       } else {
         await salesApi.update(modal.id, form);
@@ -394,7 +409,7 @@ export default function Sales() {
             <Download size={15} /> Exportar Excel
             {!limits.canExportExcel && <span style={{ fontSize: 10, marginLeft: 4, background: '#d97706', color: '#fff', padding: '1px 6px', borderRadius: 10 }}>Pyme+</span>}
           </button>
-           <button className="btn btn-primary" id="onboarding-add-sale" onClick={() => setModal('new')}><Plus size={15} /> Registrar venta</button>
+          <button className="btn btn-primary" id="onboarding-add-sale" onClick={() => setModal('new')}><Plus size={15} /> Registrar venta</button>
         </div>
       </div>
 
