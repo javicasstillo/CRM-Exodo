@@ -79,9 +79,10 @@ await db.collection('businesses').doc(uid).set({
   name: businessName,
   plan,
   status: tieneTrial ? 'trial' : 'pending_payment',
+  onboardingCompleted: false,
   trialEnd: tieneTrial ? trialEnd : null,
   currency: 'ARS',
-  lowStockThreshold: 3,
+  lowStockThreshold: 3, 
   defaultWarrantyDays: 30,
   createdAt: admin.firestore.FieldValue.serverTimestamp(),
 });
