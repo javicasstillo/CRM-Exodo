@@ -141,7 +141,7 @@ function InviteModal({ profile, business, onClose }) {
 export default function Settings() {
   const { profile, business, refreshBusiness, refreshProfile, subStatus, trialDays } = useApp();
   const toast = useToast();
-  const [tab, setTab] = useState('perfil');
+  const [tab, setTab] = useState('negocio');
   const [bizForm, setBizForm] = useState(null);
   const [profForm, setProfForm] = useState(null);
   const [users, setUsers] = useState([]);
