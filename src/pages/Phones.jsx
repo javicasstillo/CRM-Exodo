@@ -63,11 +63,57 @@ const CATEGORIES = {
     'Lenovo Tab M10', 'Lenovo Tab P11',
   ],
   'Computadora': [
+    // Apple
     'MacBook Air M1', 'MacBook Air M2', 'MacBook Air M3',
-    'MacBook Pro 13 M2', 'MacBook Pro 14 M3', 'MacBook Pro 16 M3',
-    'iMac M1', 'iMac M3',
-    'Notebook HP', 'Notebook Dell', 'Notebook Lenovo', 'Notebook Asus', 'Notebook Acer',
-    'PC Armada',
+    'MacBook Pro 13 M2', 'MacBook Pro 14 M3', 'MacBook Pro 14 M4', 'MacBook Pro 16 M3', 'MacBook Pro 16 M4',
+    'iMac M1', 'iMac M3', 'iMac M4',
+    'Mac Mini M2', 'Mac Mini M4',
+    'Mac Studio M2', 'Mac Studio M4',
+    // HP
+    'Notebook HP Pavilion 14', 'Notebook HP Pavilion 15', 'Notebook HP Pavilion 16',
+    'Notebook HP Envy 13', 'Notebook HP Envy 14', 'Notebook HP Envy 15',
+    'Notebook HP EliteBook 840', 'Notebook HP EliteBook 850',
+    'Notebook HP ProBook 440', 'Notebook HP ProBook 450',
+    'Notebook HP Victus 15', 'Notebook HP Victus 16',
+    'Notebook HP OMEN 16',
+    // Dell
+    'Notebook Dell Inspiron 14', 'Notebook Dell Inspiron 15', 'Notebook Dell Inspiron 16',
+    'Notebook Dell Latitude 5420', 'Notebook Dell Latitude 5520',
+    'Notebook Dell XPS 13', 'Notebook Dell XPS 15',
+    'Notebook Dell Vostro 14', 'Notebook Dell Vostro 15',
+    'Notebook Dell Alienware m15', 'Notebook Dell Alienware m16',
+    // Lenovo
+    'Notebook Lenovo IdeaPad 3', 'Notebook Lenovo IdeaPad 5', 'Notebook Lenovo IdeaPad Slim 5',
+    'Notebook Lenovo ThinkPad E14', 'Notebook Lenovo ThinkPad E15', 'Notebook Lenovo ThinkPad X1 Carbon',
+    'Notebook Lenovo Legion 5', 'Notebook Lenovo Legion 5 Pro', 'Notebook Lenovo Legion 7',
+    'Notebook Lenovo Yoga 7', 'Notebook Lenovo Yoga 9',
+    // Asus
+    'Notebook Asus VivoBook 14', 'Notebook Asus VivoBook 15', 'Notebook Asus VivoBook 16',
+    'Notebook Asus ZenBook 14', 'Notebook Asus ZenBook 15',
+    'Notebook Asus ROG Strix G15', 'Notebook Asus ROG Strix G16', 'Notebook Asus ROG Zephyrus G14',
+    'Notebook Asus TUF Gaming A15', 'Notebook Asus TUF Gaming F15',
+    'Notebook Asus ExpertBook B1',
+    // Acer
+    'Notebook Acer Aspire 3', 'Notebook Acer Aspire 5', 'Notebook Acer Aspire 7',
+    'Notebook Acer Swift 3', 'Notebook Acer Swift 5',
+    'Notebook Acer Nitro 5', 'Notebook Acer Nitro 16',
+    'Notebook Acer Predator Helios 300', 'Notebook Acer Predator Helios 16',
+    // MSI
+    'Notebook MSI Modern 14', 'Notebook MSI Modern 15',
+    'Notebook MSI GF63 Thin', 'Notebook MSI GL65',
+    'Notebook MSI Raider GE76', 'Notebook MSI Titan GT77',
+    // PC Armada
+    'PC Armada Gamer Entry', 'PC Armada Gamer Mid', 'PC Armada Gamer High',
+    'PC Armada Oficina Basic', 'PC Armada Oficina Pro',
+    'PC Armada Workstation',
+    // Monitores
+    'Monitor 21" Full HD', 'Monitor 24" Full HD', 'Monitor 27" Full HD',
+    'Monitor 24" 2K QHD', 'Monitor 27" 2K QHD', 'Monitor 32" 2K QHD',
+    'Monitor 27" 4K UHD', 'Monitor 32" 4K UHD',
+    'Monitor 24" 144Hz Gaming', 'Monitor 27" 144Hz Gaming', 'Monitor 27" 165Hz Gaming',
+    'Monitor 27" 240Hz Gaming', 'Monitor 32" 240Hz Gaming',
+    'Monitor Curvo 27"', 'Monitor Curvo 32"', 'Monitor Curvo 34" Ultrawide',
+    'Monitor Apple Studio Display', 'Monitor Apple Pro Display XDR',
   ],
   'Parlante': [
     'JBL Go 4', 'JBL Go 4 Pro', 'JBL Flip 6', 'JBL Charge 5', 'JBL Xtreme 3',
@@ -94,13 +140,68 @@ const CATEGORIES = {
     'Battery Pack USB-C 5000mAh', 'Battery Pack USB-C 10000mAh', 'Battery Pack USB-C 20000mAh',
   ],
   'Funda': [
-    'Funda iPhone', 'Funda Samsung', 'Funda Motorola', 'Funda Xiaomi', 'Funda Universal',
-    'Funda con MagSafe', 'Funda antigolpe', 'Funda billetera',
+    // iPhone 11
+    'Funda iPhone 11', 'Funda iPhone 11 Pro', 'Funda iPhone 11 Pro Max',
+    // iPhone 12
+    'Funda iPhone 12', 'Funda iPhone 12 Mini', 'Funda iPhone 12 Pro', 'Funda iPhone 12 Pro Max',
+    // iPhone 13
+    'Funda iPhone 13', 'Funda iPhone 13 Mini', 'Funda iPhone 13 Pro', 'Funda iPhone 13 Pro Max',
+    // iPhone 14
+    'Funda iPhone 14', 'Funda iPhone 14 Plus', 'Funda iPhone 14 Pro', 'Funda iPhone 14 Pro Max',
+    // iPhone 15
+    'Funda iPhone 15', 'Funda iPhone 15 Plus', 'Funda iPhone 15 Pro', 'Funda iPhone 15 Pro Max',
+    // iPhone 16
+    'Funda iPhone 16', 'Funda iPhone 16 Plus', 'Funda iPhone 16 Pro', 'Funda iPhone 16 Pro Max',
+    // iPhone 17
+    'Funda iPhone 17', 'Funda iPhone 17 Plus', 'Funda iPhone 17 Pro', 'Funda iPhone 17 Pro Max',
+    // Samsung A series
+    'Funda Samsung Galaxy A05', 'Funda Samsung Galaxy A14', 'Funda Samsung Galaxy A15',
+    'Funda Samsung Galaxy A25', 'Funda Samsung Galaxy A34', 'Funda Samsung Galaxy A35',
+    'Funda Samsung Galaxy A54', 'Funda Samsung Galaxy A55',
+    // Samsung S series
+    'Funda Samsung Galaxy S23', 'Funda Samsung Galaxy S23+', 'Funda Samsung Galaxy S23 Ultra',
+    'Funda Samsung Galaxy S24', 'Funda Samsung Galaxy S24+', 'Funda Samsung Galaxy S24 Ultra',
+    'Funda Samsung Galaxy S25', 'Funda Samsung Galaxy S25+', 'Funda Samsung Galaxy S25 Ultra',
+    'Funda Samsung Galaxy S26', 'Funda Samsung Galaxy S26+', 'Funda Samsung Galaxy S26 Ultra',
+    // Samsung Z series
+    'Funda Samsung Galaxy Z Fold 5', 'Funda Samsung Galaxy Z Fold 6', 'Funda Samsung Galaxy Z Fold 7',
+    'Funda Samsung Galaxy Z Flip 5', 'Funda Samsung Galaxy Z Flip 6', 'Funda Samsung Galaxy Z Flip 7',
+    // Motorola
+    'Funda Motorola Moto G04', 'Funda Motorola Moto G14', 'Funda Motorola Moto G24',
+    'Funda Motorola Moto G34', 'Funda Motorola Moto G54', 'Funda Motorola Moto G84',
+    'Funda Motorola Edge 40', 'Funda Motorola Edge 40 Neo', 'Funda Motorola Edge 40 Pro',
+    'Funda Motorola Edge 50', 'Funda Motorola Edge 50 Pro', 'Funda Motorola Edge 50 Ultra',
+    'Funda Motorola Razr 40', 'Funda Motorola Razr 40 Ultra',
+    'Funda Motorola Razr 50', 'Funda Motorola Razr 50 Ultra',
+    // Xiaomi
+    'Funda Xiaomi Redmi 12', 'Funda Xiaomi Redmi 12C', 'Funda Xiaomi Redmi 13', 'Funda Xiaomi Redmi 13C',
+    'Funda Xiaomi Redmi Note 12', 'Funda Xiaomi Redmi Note 13', 'Funda Xiaomi Redmi Note 13 Pro',
+    'Funda Xiaomi 13', 'Funda Xiaomi 13 Pro', 'Funda Xiaomi 13T', 'Funda Xiaomi 13T Pro',
+    'Funda Xiaomi 14', 'Funda Xiaomi 14 Pro', 'Funda Xiaomi 14T', 'Funda Xiaomi 14T Pro',
+    'Funda POCO X5', 'Funda POCO X5 Pro', 'Funda POCO X6', 'Funda POCO X6 Pro',
+    // Tipos de funda
+    'Funda Antigolpe Universal', 'Funda Billetera Universal', 'Funda con MagSafe Universal',
   ],
   'Vidrio Templado': [
-    'Vidrio Templado iPhone', 'Vidrio Templado Samsung', 'Vidrio Templado Motorola',
-    'Vidrio Templado Xiaomi', 'Vidrio Templado Universal',
-    'Vidrio Templado Privacidad', 'Vidrio Templado Curvo',
+    'Vidrio Templado iPhone 11', 'Vidrio Templado iPhone 11 Pro', 'Vidrio Templado iPhone 11 Pro Max',
+    'Vidrio Templado iPhone 12', 'Vidrio Templado iPhone 12 Mini', 'Vidrio Templado iPhone 12 Pro', 'Vidrio Templado iPhone 12 Pro Max',
+    'Vidrio Templado iPhone 13', 'Vidrio Templado iPhone 13 Mini', 'Vidrio Templado iPhone 13 Pro', 'Vidrio Templado iPhone 13 Pro Max',
+    'Vidrio Templado iPhone 14', 'Vidrio Templado iPhone 14 Plus', 'Vidrio Templado iPhone 14 Pro', 'Vidrio Templado iPhone 14 Pro Max',
+    'Vidrio Templado iPhone 15', 'Vidrio Templado iPhone 15 Plus', 'Vidrio Templado iPhone 15 Pro', 'Vidrio Templado iPhone 15 Pro Max',
+    'Vidrio Templado iPhone 16', 'Vidrio Templado iPhone 16 Plus', 'Vidrio Templado iPhone 16 Pro', 'Vidrio Templado iPhone 16 Pro Max',
+    'Vidrio Templado iPhone 17', 'Vidrio Templado iPhone 17 Plus', 'Vidrio Templado iPhone 17 Pro', 'Vidrio Templado iPhone 17 Pro Max',
+    'Vidrio Templado Samsung Galaxy A05', 'Vidrio Templado Samsung Galaxy A14', 'Vidrio Templado Samsung Galaxy A15',
+    'Vidrio Templado Samsung Galaxy A25', 'Vidrio Templado Samsung Galaxy A34', 'Vidrio Templado Samsung Galaxy A35',
+    'Vidrio Templado Samsung Galaxy A54', 'Vidrio Templado Samsung Galaxy A55',
+    'Vidrio Templado Samsung Galaxy S23', 'Vidrio Templado Samsung Galaxy S23 Ultra',
+    'Vidrio Templado Samsung Galaxy S24', 'Vidrio Templado Samsung Galaxy S24 Ultra',
+    'Vidrio Templado Samsung Galaxy S25', 'Vidrio Templado Samsung Galaxy S25 Ultra',
+    'Vidrio Templado Samsung Galaxy S26', 'Vidrio Templado Samsung Galaxy S26 Ultra',
+    'Vidrio Templado Motorola Moto G14', 'Vidrio Templado Motorola Moto G24', 'Vidrio Templado Motorola Moto G54',
+    'Vidrio Templado Motorola Edge 50', 'Vidrio Templado Motorola Edge 50 Pro',
+    'Vidrio Templado Xiaomi Redmi 12', 'Vidrio Templado Xiaomi Redmi Note 12', 'Vidrio Templado Xiaomi Redmi Note 13',
+    'Vidrio Templado Xiaomi 13', 'Vidrio Templado Xiaomi 14', 'Vidrio Templado Xiaomi 14T',
+    'Vidrio Templado Universal', 'Vidrio Templado Privacidad', 'Vidrio Templado Curvo',
   ],
   'Accesorio': [
     'Soporte Auto', 'Soporte Escritorio',
