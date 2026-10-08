@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { saveBusinessConfig, updateUserProfile, createInvitation } from '../firebase';
 import { useToast } from '../context/ToastContext';
-import { Building2, Users, Plus, Camera, Save, X, Shield, Trash2, Copy, Check, Mail, Clock, CreditCard, AlertTriangle, CheckCircle, XCircle, Globe, ExternalLink, Share2 } from 'lucide-react';
+import { Building2, Users, Plus, Camera, Save, X, Shield, Trash2, Copy, Check, Mail, Clock, CreditCard, AlertTriangle, CheckCircle, XCircle, Globe, ExternalLink, Share2, ArrowRight, TrendingUp } from 'lucide-react';
 import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { getFunctions, httpsCallable } from 'firebase/functions';
@@ -16,6 +16,12 @@ const PLAN_LIMITS = {
   emprendedor: { maxUsers: 1 },
   pyme:        { maxUsers: 3 },
   empresa:     { maxUsers: 999 },
+};
+
+const PLAN_FEATURES = {
+  emprendedor: ['1 usuario', 'Stock ilimitado', 'Ventas y recibos PDF', 'Catálogo público online', '7 días de prueba gratis'],
+  pyme:        ['Hasta 3 usuarios', 'Todo lo del plan Emprendedor', 'Ranking de vendedores', 'Exportar ventas a Excel', 'Estadísticas avanzadas'],
+  empresa:     ['Usuarios ilimitados', 'Todo lo del plan Pyme', 'Soporte prioritario', 'Configuración personalizada'],
 };
 
 function AvatarUploader({ value, onChange, size = 80 }) {
@@ -147,8 +153,10 @@ export default function Settings() {
   const [users, setUsers] = useState([]);
   const [saving, setSaving] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [changingPlan, setChangingPlan] = useState(false);
   const [inviteModal, setInviteModal] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [confirmChangePlan, setConfirmChangePlan] = useState(null); // el plan nuevo elegido
   const [copiedCatalog, setCopiedCatalog] = useState(false);
 
   useEffect(() => {
@@ -197,6 +205,23 @@ export default function Settings() {
     } finally { setCancelling(false); }
   };
 
+  const handleChangePlan = async (newPlan) => {
+    setChangingPlan(true);
+    try {
+      const functions = getFunctions(undefined, 'us-central1');
+      const changePlan = httpsCallable(functions, 'changePlan');
+      const result = await changePlan({ newPlan });
+      setConfirmChangePlan(null);
+      await refreshBusiness();
+      toast('Redirigiendo a MercadoPago...', 'info');
+      setTimeout(() => {
+        window.open(result.data.initPoint, '_blank');
+      }, 500);
+    } catch (e) {
+      toast(e.message || 'Error al cambiar de plan', 'error');
+    } finally { setChangingPlan(false); }
+  };
+
   const toggleUserActive = async (u) => {
     if (!confirm(`¿${u.active !== false ? 'Desactivar' : 'Activar'} a ${u.name}?`)) return;
     try {
@@ -235,100 +260,92 @@ export default function Settings() {
 
   // ── Vista reducida para vendedor y viewer ──
   if (!isAdmin) return (
-  <>
-    <div className="page-header">
-      <div><h2>Mi perfil</h2><p>Editá tu información personal</p></div>
-    </div>
-    <div className="page-body fade-up">
-
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 24, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: 4, width: 'fit-content' }}>
-        {[{ id: 'perfil', label: 'Mi perfil', icon: Users }, { id: 'catalogo', label: 'Catálogo', icon: Globe }].map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)}
-            style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, transition: 'all 0.15s', background: tab === t.id ? 'var(--primary)' : 'none', color: tab === t.id ? '#fff' : 'var(--text2)' }}>
-            <t.icon size={14} /> {t.label}
-          </button>
-        ))}
+    <>
+      <div className="page-header">
+        <div><h2>Mi perfil</h2><p>Editá tu información personal</p></div>
       </div>
-
-      {/* Perfil */}
-      {tab === 'perfil' && profForm && (
-        <div style={{ maxWidth: 500 }}>
-          <div className="card">
-            <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 18 }}>Mi perfil</h3>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
-              <AvatarUploader value={profForm.photo} onChange={v => setProfForm(f => ({ ...f, photo: v }))} size={68} />
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 600 }}>{profForm.name}</div>
-                <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>{profForm.email}</div>
-                <div style={{ marginTop: 6 }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: ROLE_COLORS[profile?.role] + '20', color: ROLE_COLORS[profile?.role], textTransform: 'uppercase' }}>
-                    {ROLE_LABELS[profile?.role]}
-                  </span>
-                </div>
-              </div>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Nombre completo</label>
-              <input className="form-input" value={profForm.name || ''} onChange={e => setProfForm(f => ({ ...f, name: e.target.value }))} />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Email</label>
-              <input className="form-input" value={profForm.email || ''} disabled style={{ opacity: 0.6, cursor: 'not-allowed' }} />
-              <span style={{ fontSize: 11, color: 'var(--text3)', marginTop: 3, display: 'block' }}>El email no se puede cambiar</span>
-            </div>
-            <button className="btn btn-primary" disabled={saving} onClick={saveProfile}>
-              <Save size={14} /> {saving ? 'Guardando...' : 'Guardar perfil'}
+      <div className="page-body fade-up">
+        <div style={{ display: 'flex', gap: 4, marginBottom: 24, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: 4, width: 'fit-content' }}>
+          {[{ id: 'perfil', label: 'Mi perfil', icon: Users }, { id: 'catalogo', label: 'Catálogo', icon: Globe }].map(t => (
+            <button key={t.id} onClick={() => setTab(t.id)}
+              style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, transition: 'all 0.15s', background: tab === t.id ? 'var(--primary)' : 'none', color: tab === t.id ? '#fff' : 'var(--text2)' }}>
+              <t.icon size={14} /> {t.label}
             </button>
-          </div>
+          ))}
         </div>
-      )}
-
-      {/* Catálogo — solo lectura para vendedor */}
-      {tab === 'catalogo' && (
-        <div style={{ maxWidth: 560 }}>
-          <div className="card">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-              <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--primary-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Globe size={20} color="var(--primary)" />
-              </div>
-              <div>
-                <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>Catálogo público</h3>
-                <p style={{ fontSize: 12, color: 'var(--text3)', margin: 0, marginTop: 2 }}>Compartí el catálogo con tus clientes</p>
-              </div>
-            </div>
-            {catalogSlug ? (
-              <>
-                <div style={{ background: 'var(--bg2)', borderRadius: 12, padding: '14px 16px', marginBottom: 16 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 8 }}>Link público</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--primary)', wordBreak: 'break-all' }}>{catalogUrl}</div>
-                    <button className="btn btn-sm btn-secondary" onClick={copyCatalogUrl} style={{ flexShrink: 0 }}>
-                      {copiedCatalog ? <Check size={13} /> : <Copy size={13} />}
-                    </button>
+        {tab === 'perfil' && profForm && (
+          <div style={{ maxWidth: 500 }}>
+            <div className="card">
+              <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 18 }}>Mi perfil</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
+                <AvatarUploader value={profForm.photo} onChange={v => setProfForm(f => ({ ...f, photo: v }))} size={68} />
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>{profForm.name}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>{profForm.email}</div>
+                  <div style={{ marginTop: 6 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: ROLE_COLORS[profile?.role] + '20', color: ROLE_COLORS[profile?.role], textTransform: 'uppercase' }}>
+                      {ROLE_LABELS[profile?.role]}
+                    </span>
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 10 }}>
-                  <a href={catalogUrl} target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ flex: 1, justifyContent: 'center', textDecoration: 'none' }}>
-                    <ExternalLink size={14} /> Ver catálogo
-                  </a>
-                  <button className="btn btn-secondary" onClick={shareCatalogWA} style={{ flex: 1, justifyContent: 'center' }}>
-                    <Share2 size={14} /> Compartir por WhatsApp
-                  </button>
-                </div>
-              </>
-            ) : (
-              <p style={{ fontSize: 13, color: 'var(--text3)', textAlign: 'center', padding: '20px 0' }}>El catálogo todavía no está configurado.</p>
-            )}
+              </div>
+              <div className="form-group">
+                <label className="form-label">Nombre completo</label>
+                <input className="form-input" value={profForm.name || ''} onChange={e => setProfForm(f => ({ ...f, name: e.target.value }))} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Email</label>
+                <input className="form-input" value={profForm.email || ''} disabled style={{ opacity: 0.6, cursor: 'not-allowed' }} />
+                <span style={{ fontSize: 11, color: 'var(--text3)', marginTop: 3, display: 'block' }}>El email no se puede cambiar</span>
+              </div>
+              <button className="btn btn-primary" disabled={saving} onClick={saveProfile}>
+                <Save size={14} /> {saving ? 'Guardando...' : 'Guardar perfil'}
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+        {tab === 'catalogo' && (
+          <div style={{ maxWidth: 560 }}>
+            <div className="card">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--primary-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Globe size={20} color="var(--primary)" />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>Catálogo público</h3>
+                  <p style={{ fontSize: 12, color: 'var(--text3)', margin: 0, marginTop: 2 }}>Compartí el catálogo con tus clientes</p>
+                </div>
+              </div>
+              {catalogSlug ? (
+                <>
+                  <div style={{ background: 'var(--bg2)', borderRadius: 12, padding: '14px 16px', marginBottom: 16 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 8 }}>Link público</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--primary)', wordBreak: 'break-all' }}>{catalogUrl}</div>
+                      <button className="btn btn-sm btn-secondary" onClick={copyCatalogUrl} style={{ flexShrink: 0 }}>
+                        {copiedCatalog ? <Check size={13} /> : <Copy size={13} />}
+                      </button>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <a href={catalogUrl} target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ flex: 1, justifyContent: 'center', textDecoration: 'none' }}>
+                      <ExternalLink size={14} /> Ver catálogo
+                    </a>
+                    <button className="btn btn-secondary" onClick={shareCatalogWA} style={{ flex: 1, justifyContent: 'center' }}>
+                      <Share2 size={14} /> Compartir por WhatsApp
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <p style={{ fontSize: 13, color: 'var(--text3)', textAlign: 'center', padding: '20px 0' }}>El catálogo todavía no está configurado.</p>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </>
+  );
 
-    </div>
-  </>
-);
-
-  // ── Vista completa para admin ──
   const TABS = [
     { id: 'negocio',     label: 'Negocio',     icon: Building2  },
     { id: 'perfil',      label: 'Mi perfil',   icon: Users      },
@@ -344,7 +361,6 @@ export default function Settings() {
       </div>
       <div className="page-body fade-up">
 
-        {/* Tabs */}
         <div style={{ display: 'flex', gap: 4, marginBottom: 24, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: 4, width: 'fit-content', flexWrap: 'wrap' }}>
           {TABS.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
@@ -359,7 +375,7 @@ export default function Settings() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
             <div className="card">
               <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 18 }}>Información del negocio</h3>
-             <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }} id="onboarding-logo">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }} id="onboarding-logo">
                 <AvatarUploader value={bizForm.logo} onChange={v => setBizForm(f => ({ ...f, logo: v }))} size={72} />
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 600 }}>Logo del negocio</div>
@@ -391,7 +407,6 @@ export default function Settings() {
                 <Save size={14} /> {saving ? 'Guardando...' : 'Guardar cambios'}
               </button>
             </div>
-
             <div className="card">
               <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 18 }}>Parámetros del sistema</h3>
               <div className="form-group">
@@ -408,7 +423,6 @@ export default function Settings() {
                 <input className="form-input" placeholder="+5492615551234" value={bizForm.whatsapp || ''} onChange={e => setBizForm(f => ({ ...f, whatsapp: e.target.value }))} />
               </div>
               <button className="btn btn-primary" disabled={saving} onClick={saveBusiness} style={{ marginTop: 4 }} id="onboarding-save">
-
                 <Save size={14} /> {saving ? 'Guardando...' : 'Guardar cambios'}
               </button>
             </div>
@@ -474,13 +488,7 @@ export default function Settings() {
             <div className="table-wrap">
               <table>
                 <thead>
-                  <tr>
-                    <th>Usuario</th>
-                    <th>Email</th>
-                    <th>Rol</th>
-                    <th>Estado</th>
-                    <th></th>
-                  </tr>
+                  <tr><th>Usuario</th><th>Email</th><th>Rol</th><th>Estado</th><th></th></tr>
                 </thead>
                 <tbody>
                   {users.map(u => (
@@ -488,10 +496,7 @@ export default function Settings() {
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'var(--primary-bg)', border: '2px solid var(--border)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'var(--primary)', flexShrink: 0 }}>
-                            {u.photo
-                              ? <img src={u.photo} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
-                              : u.name?.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
-                            }
+                            {u.photo ? <img src={u.photo} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" /> : u.name?.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()}
                           </div>
                           <div>
                             <div style={{ fontWeight: 600, fontSize: 13 }}>{u.name}</div>
@@ -512,8 +517,7 @@ export default function Settings() {
                       </td>
                       <td>
                         {u.id !== profile?.id && (
-                          <button className={`btn btn-sm ${u.active !== false ? 'btn-danger' : 'btn-secondary'}`}
-                            onClick={() => toggleUserActive(u)}>
+                          <button className={`btn btn-sm ${u.active !== false ? 'btn-danger' : 'btn-secondary'}`} onClick={() => toggleUserActive(u)}>
                             <Trash2 size={12} />
                           </button>
                         )}
@@ -539,7 +543,6 @@ export default function Settings() {
                   <p style={{ fontSize: 12, color: 'var(--text3)', margin: 0, marginTop: 2 }}>Compartí tu stock online con tus clientes</p>
                 </div>
               </div>
-
               {catalogSlug ? (
                 <>
                   <div style={{ background: 'var(--bg2)', borderRadius: 12, padding: '14px 16px', marginBottom: 16 }}>
@@ -551,7 +554,6 @@ export default function Settings() {
                       </button>
                     </div>
                   </div>
-
                   <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
                     <a href={catalogUrl} target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ flex: 1, justifyContent: 'center', textDecoration: 'none' }}>
                       <ExternalLink size={14} /> Ver catálogo
@@ -560,7 +562,6 @@ export default function Settings() {
                       <Share2 size={14} /> Compartir por WhatsApp
                     </button>
                   </div>
-
                   <div style={{ background: 'var(--primary-bg)', border: '1px solid rgba(13,110,253,0.15)', borderRadius: 12, padding: '14px 16px' }}>
                     <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--primary)', marginBottom: 10 }}>¿Cómo funciona?</div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -577,7 +578,6 @@ export default function Settings() {
                       ))}
                     </div>
                   </div>
-
                   {bizForm && (
                     <div style={{ marginTop: 20, borderTop: '1px solid var(--border)', paddingTop: 20 }}>
                       <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Personalizar URL del catálogo</div>
@@ -634,8 +634,10 @@ export default function Settings() {
 
         {/* TAB: Suscripción */}
         {tab === 'suscripcion' && (
-          <div style={{ maxWidth: 560 }}>
-            <div className="card">
+          <div style={{ maxWidth: 680 }}>
+
+            {/* Estado actual */}
+            <div className="card" style={{ marginBottom: 20 }}>
               <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 18 }}>Mi suscripción</h3>
 
               {(() => {
@@ -708,6 +710,85 @@ export default function Settings() {
                 </div>
               )}
             </div>
+
+            {/* Cambiar de plan */}
+            <div className="card">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--primary-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <TrendingUp size={18} color="var(--primary)" />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>Cambiar de plan</h3>
+                  <p style={{ fontSize: 12, color: 'var(--text3)', margin: 0, marginTop: 2 }}>Subí o bajá tu plan cuando quieras</p>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+                {Object.entries(PLAN_LABELS).map(([key, label]) => {
+                  const isCurrent = plan === key;
+                  const features = PLAN_FEATURES[key] || [];
+                  return (
+                    <div key={key} style={{
+                      border: `2px solid ${isCurrent ? 'var(--primary)' : 'var(--border)'}`,
+                      borderRadius: 14,
+                      padding: '16px',
+                      background: isCurrent ? 'var(--primary-bg)' : 'var(--bg-card)',
+                      position: 'relative',
+                    }}>
+                      {isCurrent && (
+                        <div style={{ position: 'absolute', top: -10, left: '50%', transform: 'translateX(-50%)', background: 'var(--primary)', color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 10px', borderRadius: 20, whiteSpace: 'nowrap' }}>
+                          Plan actual
+                        </div>
+                      )}
+                      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>{label}</div>
+                      <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontSize: 20, fontWeight: 800, color: 'var(--primary)', marginBottom: 12 }}>
+                        {fmt(PLAN_PRICES[key])}<span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text3)' }}>/mes</span>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
+                        {features.map((f, i) => (
+                          <div key={i} style={{ display: 'flex', gap: 6, fontSize: 11, color: 'var(--text2)', alignItems: 'flex-start' }}>
+                            <span style={{ color: 'var(--primary)', fontWeight: 700, flexShrink: 0, marginTop: 1 }}>✓</span>
+                            <span>{f}</span>
+                          </div>
+                        ))}
+                      </div>
+                      {!isCurrent && (
+                        <button
+                          className="btn btn-primary"
+                          style={{ width: '100%', justifyContent: 'center', fontSize: 12 }}
+                          onClick={() => setConfirmChangePlan(key)}>
+                          Cambiar a este <ArrowRight size={12} />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Confirmación cambio de plan */}
+              {confirmChangePlan && (
+                <div style={{ marginTop: 20, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 18px' }}>
+                  <div style={{ display: 'flex', gap: 10, marginBottom: 14, alignItems: 'flex-start' }}>
+                    <AlertTriangle size={16} color="#d97706" style={{ flexShrink: 0, marginTop: 2 }} />
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>
+                        ¿Cambiar al plan {PLAN_LABELS[confirmChangePlan]}?
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--text3)', lineHeight: 1.6 }}>
+                        Tu suscripción actual se cancelará y serás redirigido a MercadoPago para suscribirte al nuevo plan. El nuevo precio es <strong>{fmt(PLAN_PRICES[confirmChangePlan])}/mes</strong>.
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <button className="btn btn-secondary btn-sm" onClick={() => setConfirmChangePlan(null)}>Cancelar</button>
+                    <button className="btn btn-primary btn-sm" disabled={changingPlan} onClick={() => handleChangePlan(confirmChangePlan)}>
+                      {changingPlan ? 'Procesando...' : `Sí, cambiar a ${PLAN_LABELS[confirmChangePlan]}`}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
           </div>
         )}
 
