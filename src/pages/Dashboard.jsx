@@ -4,7 +4,8 @@ import { Smartphone, ShoppingCart, TrendingUp, DollarSign, AlertTriangle, Packag
 import { SourceIcon, SourceLabel } from '../components/SourceIcon';
 import { useApp } from '../context/AppContext';
 
-const fmt = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(n || 0);
+const fmt    = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(n || 0);
+const fmtUSD = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(n || 0);
 
 const SOURCE_BAR_CLASS = {
   'Instagram':     'progress-bar--instagram',
@@ -34,24 +35,49 @@ export default function Dashboard() {
     return () => { u1(); u2(); u3(); u4(); };
   }, []);
 
-  const stock = phones.filter(p => p.status === 'disponible').reduce((a, p) => a + (Number(p.quantity) || 1), 0);
+  const stock    = phones.filter(p => p.status === 'disponible').reduce((a, p) => a + (Number(p.quantity) || 1), 0);
   const vendidos = phones.filter(p => p.status === 'vendido').length;
-  const completed = sales.filter(s => s.status === 'completada');
-  const totalIngresos = completed.reduce((a, s) => a + Number(s.salePrice || 0), 0);
-  const totalCostos = completed.reduce((a, s) => a + Number(s.costPrice || 0), 0);
-  const gananciaBruta = totalIngresos - totalCostos;
-  const totalGastos = expenses.reduce((a, e) => a + Number(e.amount || 0), 0);
-  const gananciaNeta = gananciaBruta - totalGastos;
-  const margen = totalIngresos > 0 ? ((gananciaBruta / totalIngresos) * 100).toFixed(1) : 0;
-  const ticketProm = completed.length > 0 ? totalIngresos / completed.length : 0;
+
+  // ── Separar ventas por moneda ──────────────────────────────────────
+  const completed    = sales.filter(s => s.status === 'completada');
+  const completedARS = completed.filter(s => !s.currency || s.currency === 'ARS');
+  const completedUSD = completed.filter(s => s.currency === 'USD');
+
+  const hasUSD = completedUSD.length > 0;
+
+  // Métricas ARS
+  const totalIngresosARS = completedARS.reduce((a, s) => a + Number(s.salePrice || 0), 0);
+  const totalCostosARS   = completedARS.reduce((a, s) => a + Number(s.costPrice || 0), 0);
+  const gananciaBrutaARS = totalIngresosARS - totalCostosARS;
+  const totalGastos      = expenses.reduce((a, e) => a + Number(e.amount || 0), 0);
+  const gananciaNeta     = gananciaBrutaARS - totalGastos;
+  const margen           = totalIngresosARS > 0 ? ((gananciaBrutaARS / totalIngresosARS) * 100).toFixed(1) : 0;
+  const ticketProm       = completedARS.length > 0 ? totalIngresosARS / completedARS.length : 0;
+
+  // Métricas USD
+  const totalIngresosUSD = completedUSD.reduce((a, s) => a + Number(s.salePrice || 0), 0);
+  const totalCostosUSD   = completedUSD.reduce((a, s) => a + Number(s.costPrice || 0), 0);
+  const gananciaBrutaUSD = totalIngresosUSD - totalCostosUSD;
+
+  // Este mes — solo ARS
+  const now       = new Date();
+  const mesActual = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const ventasMes    = completedARS.filter(s => s.saleDate?.slice(0, 7) === mesActual);
+  const ingresosMes  = ventasMes.reduce((a, s) => a + Number(s.salePrice || 0), 0);
+  const gananciaMes  = ventasMes.reduce((a, s) => a + (Number(s.salePrice || 0) - Number(s.costPrice || 0)), 0);
+
+  // Este mes USD
+  const ventasMesUSD   = completedUSD.filter(s => s.saleDate?.slice(0, 7) === mesActual);
+  const gananciaMesUSD = ventasMesUSD.reduce((a, s) => a + (Number(s.salePrice || 0) - Number(s.costPrice || 0)), 0);
 
   const recentSales = sales.slice(0, 5);
-  const getPhone = (id) => phones.find(p => p.id === id);
-  const getBuyer = (id) => buyers.find(b => b.id === id);
-  const sinCosto = phones.filter(p => p.status === 'disponible' && !p.costPrice);
+  const getPhone    = (id) => phones.find(p => p.id === id);
+  const getBuyer    = (id) => buyers.find(b => b.id === id);
+  const sinCosto    = phones.filter(p => p.status === 'disponible' && !p.costPrice);
 
   const byModel = {};
   completed.forEach(s => {
+    if (s.currency && s.currency !== 'ARS') return; // excluir USD del ranking
     const phone = phones.find(p => p.id === s.phoneId);
     const model = phone?.model || 'Desconocido';
     if (!byModel[model]) byModel[model] = { count: 0, profit: 0 };
@@ -68,14 +94,8 @@ export default function Dashboard() {
   });
   const topSources = Object.entries(bySource).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
-  const now = new Date();
-  const mesActual = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const ventasMes = completed.filter(s => s.saleDate?.slice(0, 7) === mesActual);
-  const ingresosMes = ventasMes.reduce((a, s) => a + Number(s.salePrice || 0), 0);
-  const gananciaMes = ventasMes.reduce((a, s) => a + (Number(s.salePrice || 0) - Number(s.costPrice || 0)), 0);
-
   const stockDisponible = phones.filter(p => p.status === 'disponible');
-  const totalProductos = stockDisponible.length;
+  const totalProductos  = stockDisponible.length;
 
   return (
     <>
@@ -110,8 +130,11 @@ export default function Dashboard() {
             <div style={{ position: 'absolute', top: -20, right: -20, width: 100, height: 100, borderRadius: '50%', background: 'rgba(255,255,255,0.08)' }} />
             <div style={{ position: 'absolute', bottom: -30, right: 20, width: 70, height: 70, borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', opacity: 0.75, marginBottom: 10 }}>Este mes</div>
-            <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: -0.5, lineHeight: 1, marginBottom: 8 }}>{fmt(gananciaMes)}</div>
-            <div style={{ fontSize: 11, opacity: 0.75 }}>Ganancia · {ventasMes.length} ventas · {fmt(ingresosMes)} ingresos</div>
+            <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: -0.5, lineHeight: 1, marginBottom: 4 }}>{fmt(gananciaMes)}</div>
+            {hasUSD && gananciaMesUSD > 0 && (
+              <div style={{ fontSize: 13, fontWeight: 700, opacity: 0.9, marginBottom: 4 }}>+ {fmtUSD(gananciaMesUSD)} USD</div>
+            )}
+            <div style={{ fontSize: 11, opacity: 0.75 }}>Ganancia · {ventasMes.length + ventasMesUSD.length} ventas · {fmt(ingresosMes)} ingresos</div>
           </div>
 
           <div className="stat-card">
@@ -152,9 +175,10 @@ export default function Dashboard() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {recentSales.length === 0 && <p style={{ color: 'var(--text3)', fontSize: 13 }}>Sin ventas registradas</p>}
               {recentSales.map(s => {
-                const phone = getPhone(s.phoneId);
-                const buyer = getBuyer(s.buyerId);
+                const phone   = getPhone(s.phoneId);
+                const buyer   = getBuyer(s.buyerId);
                 const ganancia = Number(s.salePrice || 0) - Number(s.costPrice || 0);
+                const isUSD   = s.currency === 'USD';
                 return (
                   <div key={s.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: 'var(--bg)', borderRadius: 10, border: '1px solid var(--border)', transition: 'background 0.15s' }}
                     onMouseEnter={e => e.currentTarget.style.background = 'var(--bg2)'}
@@ -164,7 +188,10 @@ export default function Dashboard() {
                         {phone?.photo ? <img src={phone.photo} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" /> : <Smartphone size={15} color="var(--text3)" />}
                       </div>
                       <div>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{phone?.model || '—'}</div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                          {phone?.model || '—'}
+                          {isUSD && <span style={{ fontSize: 9, fontWeight: 700, background: '#d97706', color: '#fff', padding: '1px 5px', borderRadius: 4 }}>USD</span>}
+                        </div>
                         <div style={{ fontSize: 11, color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: 5, marginTop: 1 }}>
                           {buyer?.name || 'Sin comprador'} · {s.saleDate}
                           {s.source && <><span>·</span><SourceIcon source={s.source} size={12} /></>}
@@ -172,8 +199,12 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{fmt(s.salePrice)}</div>
-                      <div style={{ fontSize: 11, color: '#16a34a', fontWeight: 600 }}>+{fmt(ganancia)}</div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
+                        {isUSD ? fmtUSD(s.salePrice) : fmt(s.salePrice)}
+                      </div>
+                      <div style={{ fontSize: 11, color: '#16a34a', fontWeight: 600 }}>
+                        +{isUSD ? fmtUSD(ganancia) : fmt(ganancia)}
+                      </div>
                     </div>
                   </div>
                 );
@@ -194,7 +225,8 @@ export default function Dashboard() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {stock === 0 && <p style={{ color: 'var(--text3)', fontSize: 13 }}>Sin stock disponible</p>}
               {stockDisponible.slice(0, 5).map(p => {
-                const qty = Number(p.quantity) || 1;
+                const qty   = Number(p.quantity) || 1;
+                const isUSD = p.currency === 'USD';
                 return (
                   <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'var(--bg)', borderRadius: 10, border: '1px solid var(--border)' }}>
                     <div style={{ width: 36, height: 36, borderRadius: 9, background: 'var(--bg3)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '1px solid var(--border)' }}>
@@ -205,7 +237,9 @@ export default function Dashboard() {
                       <div style={{ fontSize: 11, color: 'var(--text3)' }}>{p.storage && p.storage !== 'N/A' ? `${p.storage} · ` : ''}{p.color}</div>
                     </div>
                     <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--primary)' }}>{fmt(p.salePrice)}</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--primary)' }}>
+                        {isUSD ? fmtUSD(p.salePrice) : fmt(p.salePrice)}
+                      </div>
                       {qty > 1 && <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 1 }}>x{qty} uds.</div>}
                     </div>
                   </div>
@@ -215,10 +249,9 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* FILA 3 — Top modelos (Pyme+) + Origen clientes + Financiero */}
+        {/* FILA 3 — Top modelos + Origen clientes + Financiero */}
         <div className="dashboard-cols" style={{ display: 'grid', gridTemplateColumns: isBasic ? '1fr 1fr' : '1fr 1fr 1fr', gap: 16 }}>
 
-          {/* Top modelos — solo Pyme y Empresa */}
           {!isBasic && (
             <div className="card">
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
@@ -254,7 +287,6 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* Origen clientes */}
           <div className="card">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <h3 style={{ fontSize: 15, fontWeight: 700 }}>Origen Clientes</h3>
@@ -265,7 +297,7 @@ export default function Dashboard() {
             {topSources.length === 0
               ? <p style={{ color: 'var(--text3)', fontSize: 13 }}>Sin datos aún</p>
               : topSources.map(([source, count]) => {
-                const pct = completed.length > 0 ? Math.round((count / completed.length) * 100) : 0;
+                const pct      = completed.length > 0 ? Math.round((count / completed.length) * 100) : 0;
                 const barClass = SOURCE_BAR_CLASS[source] || 'progress-bar--default';
                 return (
                   <div key={source} style={{ marginBottom: 14 }}>
@@ -282,7 +314,7 @@ export default function Dashboard() {
             }
           </div>
 
-          {/* Financiero */}
+          {/* Financiero — ARS separado de USD */}
           <div className="card">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <h3 style={{ fontSize: 15, fontWeight: 700 }}>Financiero</h3>
@@ -290,23 +322,49 @@ export default function Dashboard() {
                 <DollarSign size={15} color="var(--primary)" />
               </div>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
+
+            {/* ARS */}
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 8 }}>Pesos ARS</div>
+            <div style={{ display: 'flex', flexDirection: 'column', marginBottom: hasUSD ? 20 : 0 }}>
               {[
-                { label: 'Ingresos totales', value: fmt(totalIngresos) },
-                { label: 'Costos de equipos', value: `− ${fmt(totalCostos)}` },
-                { label: 'Ganancia bruta', value: fmt(gananciaBruta), highlight: true },
+                { label: 'Ingresos totales',  value: fmt(totalIngresosARS) },
+                { label: 'Costos de equipos', value: `− ${fmt(totalCostosARS)}` },
+                { label: 'Ganancia bruta',    value: fmt(gananciaBrutaARS), highlight: true },
                 { label: 'Gastos operativos', value: `− ${fmt(totalGastos)}` },
               ].map((row, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: row.highlight ? '2px solid var(--primary)' : '1px solid var(--border)', fontSize: 12 }}>
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: row.highlight ? '2px solid var(--primary)' : '1px solid var(--border)', fontSize: 12 }}>
                   <span style={{ color: 'var(--text3)', fontWeight: 500 }}>{row.label}</span>
                   <span style={{ fontWeight: 700, fontSize: 13, color: row.highlight ? 'var(--primary)' : 'var(--text)' }}>{row.value}</span>
                 </div>
               ))}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 0 0' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0 0' }}>
                 <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)' }}>GANANCIA NETA</span>
-                <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--primary)' }}>{fmt(gananciaNeta)}</span>
+                <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--primary)' }}>{fmt(gananciaNeta)}</span>
               </div>
             </div>
+
+            {/* USD — solo si hay ventas en USD */}
+            {hasUSD && (
+              <>
+                <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16, marginTop: 4 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: '#d97706', marginBottom: 8 }}>Dólares USD</div>
+                  {[
+                    { label: 'Ingresos USD',  value: fmtUSD(totalIngresosUSD) },
+                    { label: 'Costos USD',    value: `− ${fmtUSD(totalCostosUSD)}` },
+                    { label: 'Ganancia USD',  value: fmtUSD(gananciaBrutaUSD), highlight: true },
+                  ].map((row, i) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: row.highlight ? `2px solid #d97706` : '1px solid var(--border)', fontSize: 12 }}>
+                      <span style={{ color: 'var(--text3)', fontWeight: 500 }}>{row.label}</span>
+                      <span style={{ fontWeight: 700, fontSize: 13, color: row.highlight ? '#d97706' : 'var(--text)' }}>{row.value}</span>
+                    </div>
+                  ))}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0 0' }}>
+                    <span style={{ fontWeight: 700, fontSize: 12, color: 'var(--text3)' }}>{completedUSD.length} ventas en USD</span>
+                    <span style={{ fontSize: 16, fontWeight: 800, color: '#d97706' }}>{fmtUSD(gananciaBrutaUSD)}</span>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
         </div>
