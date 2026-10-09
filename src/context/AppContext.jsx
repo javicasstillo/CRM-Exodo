@@ -14,6 +14,11 @@ export function AppProvider({ user, children }) {
   const [trialDays, setTrialDays]         = useState(null);
   const [isNewBusiness, setIsNewBusiness] = useState(false);
 
+  // ── Sucursales ──────────────────────────────────────────────────────
+  const [branches, setBranches]               = useState([]); // lista de sucursales del maestro
+  const [activeBranchId, setActiveBranchId]   = useState(null); // null = negocio maestro
+  const [activeBusiness, setActiveBusiness]   = useState(null); // negocio activo (maestro o sucursal)
+
   useEffect(() => {
     if (!user) { setLoading(false); return; }
     loadData();
@@ -25,8 +30,6 @@ export function AppProvider({ user, children }) {
       let prof = await getUserProfile(user.uid);
 
       if (!prof) {
-        // Usuario completamente nuevo (no debería pasar con la Cloud Function,
-        // pero lo manejamos igual como fallback)
         const businessId = user.uid;
         prof = {
           id: user.uid,
@@ -54,7 +57,6 @@ export function AppProvider({ user, children }) {
 
       setProfile(prof);
 
-      // Bloquear usuario desactivado
       if (prof.active === false) {
         const { logout } = await import('../firebase');
         await logout();
@@ -65,14 +67,17 @@ export function AppProvider({ user, children }) {
 
       const biz = await getBusinessConfig(prof.businessId);
       setBusiness(biz);
+      setActiveBusiness(biz);
 
-      // Mostrar tour si onboardingCompleted no es true
-      // Esto cubre tanto negocios nuevos como los creados por la Cloud Function
       if (biz?.onboardingCompleted !== true) {
         setIsNewBusiness(true);
       }
 
-      // Verificar estado de suscripción
+      // Cargar sucursales si es plan Empresa
+      if (biz?.plan === 'empresa' && biz?.branches?.length > 0) {
+        setBranches(biz.branches);
+      }
+
       try {
         const functions = getFunctions(undefined, 'us-central1');
         const getStatus = httpsCallable(functions, 'getBusinessStatus');
@@ -91,10 +96,28 @@ export function AppProvider({ user, children }) {
     }
   };
 
+  // Cambiar de sucursal — actualiza el businessId activo en el api
+  const switchBranch = async (branchId) => {
+    if (branchId === null) {
+      // Volver al negocio maestro
+      setActiveBranchId(null);
+      setActiveBusiness(business);
+      setBusinessId(profile.businessId);
+    } else {
+      // Cambiar a una sucursal
+      const branchBiz = await getBusinessConfig(branchId);
+      setActiveBranchId(branchId);
+      setActiveBusiness(branchBiz);
+      setBusinessId(branchId);
+    }
+  };
+
   const refreshBusiness = async () => {
     if (!profile) return;
     const biz = await getBusinessConfig(profile.businessId);
     setBusiness(biz);
+    if (!activeBranchId) setActiveBusiness(biz);
+    if (biz?.branches?.length > 0) setBranches(biz.branches);
   };
 
   const refreshProfile = async () => {
@@ -109,6 +132,10 @@ export function AppProvider({ user, children }) {
       subStatus, trialDays,
       isNewBusiness, setIsNewBusiness,
       refreshBusiness, refreshProfile,
+      // Sucursales
+      branches, activeBranchId, activeBusiness,
+      switchBranch,
+      isMasterViewing: activeBranchId !== null, // true cuando el maestro está viendo una sucursal
     }}>
       {children}
     </AppContext.Provider>

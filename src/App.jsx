@@ -18,6 +18,7 @@ import { ToastProvider } from './context/ToastContext';
 import { AppProvider, useApp } from './context/AppContext';
 import SubscriptionGate from './components/SubscriptionGate';
 import { Menu } from 'lucide-react';
+import BranchPanel from './pages/BranchPanel';
 
 const SUPER_ADMIN_UID = '5aHXAuMsBxPTlmyW9kDSM4tGXNX2';
 
@@ -30,6 +31,7 @@ const PAGE_TITLES = {
   stats:      'Estadísticas',
   settings:   'Configuración',
   admin:      'Admin — Genesys',
+  branchPanel: 'Vista consolidada',
 };
 
 const PAGES = {
@@ -41,6 +43,7 @@ const PAGES = {
   stats:      Stats,
   settings:   Settings,
   admin:      AdminPanel,
+  branchPanel: BranchPanel,
 };
 
 function Skeleton() {

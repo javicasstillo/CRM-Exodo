@@ -6,6 +6,7 @@ import { Building2, Users, Plus, Camera, Save, X, Shield, Trash2, Copy, Check, M
 import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { getFunctions, httpsCallable } from 'firebase/functions';
+import SucursalesTab from '../components/SucursalesTab';
 
 const ROLE_LABELS = { admin: 'Administrador', vendedor: 'Vendedor', viewer: 'Solo lectura' };
 const ROLE_COLORS = { admin: '#0d6efd', vendedor: '#16a34a', viewer: '#d97706' };
@@ -346,13 +347,14 @@ export default function Settings() {
     </>
   );
 
-  const TABS = [
-    { id: 'negocio',     label: 'Negocio',     icon: Building2  },
-    { id: 'perfil',      label: 'Mi perfil',   icon: Users      },
-    { id: 'usuarios',    label: 'Usuarios',    icon: Shield     },
-    { id: 'catalogo',    label: 'Catálogo',    icon: Globe      },
-    { id: 'suscripcion', label: 'Suscripción', icon: CreditCard },
-  ];
+ const TABS = [
+  { id: 'negocio',     label: 'Negocio',     icon: Building2  },
+  { id: 'perfil',      label: 'Mi perfil',   icon: Users      },
+  { id: 'usuarios',    label: 'Usuarios',    icon: Shield     },
+  { id: 'catalogo',    label: 'Catálogo',    icon: Globe      },
+  { id: 'suscripcion', label: 'Suscripción', icon: CreditCard },
+  ...(plan === 'empresa' ? [{ id: 'sucursales', label: 'Sucursales', icon: Building2 }] : []),
+];
 
   return (
     <>
@@ -791,7 +793,9 @@ export default function Settings() {
 
           </div>
         )}
-
+      {tab === 'sucursales' && business?.plan === 'empresa' && (
+          <SucursalesTab profile={profile} business={business} refreshBusiness={refreshBusiness} />
+        )}
       </div>
       {inviteModal && (
         <InviteModal profile={profile} business={business} onClose={() => setInviteModal(false)} />

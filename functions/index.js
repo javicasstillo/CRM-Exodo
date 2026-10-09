@@ -466,4 +466,112 @@ exports.changePlan = onCall(async (request) => {
     plan: newPlan,
     amount: PLANS[newPlan].amount,
   };
+  
 });
+
+// ── 11. Crear sucursal ─────────────────────────────────────────────────
+exports.createBranch = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "No autenticado");
+
+  const { branchName, adminEmail, adminPassword, adminName } = request.data;
+  if (!branchName || !adminEmail || !adminPassword || !adminName) {
+    throw new HttpsError("invalid-argument", "Faltan datos requeridos");
+  }
+
+  // Verificar que el negocio maestro sea plan Empresa
+  const userDoc = await db.collection("users").doc(uid).get();
+  if (!userDoc.exists) throw new HttpsError("not-found", "Usuario no encontrado");
+
+  const masterUser = userDoc.data();
+  const masterBizDoc = await db.collection("businesses").doc(masterUser.businessId).get();
+  if (!masterBizDoc.exists) throw new HttpsError("not-found", "Negocio no encontrado");
+
+  const masterBiz = masterBizDoc.data();
+  if (masterBiz.plan !== 'empresa') {
+    throw new HttpsError("permission-denied", "Las sucursales solo están disponibles en el plan Empresa");
+  }
+
+  try {
+    // Crear usuario admin de la sucursal en Firebase Auth
+    const newUser = await admin.auth().createUser({
+      email: adminEmail,
+      password: adminPassword,
+      displayName: adminName,
+    });
+
+    const branchId = newUser.uid;
+
+    // Crear perfil del usuario admin de la sucursal
+    await db.collection("users").doc(branchId).set({
+      name: adminName,
+      email: adminEmail,
+      role: 'admin',
+      businessId: branchId,
+      active: true,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    // Crear el negocio de la sucursal vinculado al maestro
+    await db.collection("businesses").doc(branchId).set({
+      name: branchName,
+      plan: 'empresa',
+      status: 'active',
+      parentBusinessId: masterUser.businessId, // vínculo al maestro
+      masterAdminId: uid,
+      currency: masterBiz.currency || 'ARS',
+      lowStockThreshold: masterBiz.lowStockThreshold || 3,
+      defaultWarrantyDays: masterBiz.defaultWarrantyDays || 30,
+      whatsapp: '',
+      onboardingCompleted: true,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    // Registrar la sucursal en el negocio maestro
+    await db.collection("businesses").doc(masterUser.businessId).update({
+      branches: admin.firestore.FieldValue.arrayUnion({
+        id: branchId,
+        name: branchName,
+        adminEmail,
+        adminName,
+        createdAt: new Date().toISOString(),
+      }),
+    });
+
+    // Enviar email de bienvenida al admin de la sucursal
+    try {
+      const resend = new Resend(RESEND_API_KEY);
+      await resend.emails.send({
+        from: 'Genesys App <hola@genesys.com.ar>',
+        to: adminEmail,
+        subject: `Acceso a ${branchName} — Genesys App`,
+        html: `
+          <div style="font-family:Inter,sans-serif;max-width:560px;margin:0 auto;padding:40px 24px;color:#0f1729">
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:900;color:#0d6efd;margin-bottom:24px">
+              Genesys <span style="color:#0f1729">App</span>
+            </div>
+            <p style="font-size:15px;line-height:1.7;color:#3d4e72;margin-bottom:20px">
+              Hola <strong>${adminName}</strong>, se creó tu acceso como administrador de <strong>${branchName}</strong>.
+            </p>
+            <div style="background:#f8f9fc;border-radius:12px;padding:20px 24px;margin-bottom:28px;border:1px solid #dde3f0">
+              <div style="font-size:13px;margin-bottom:8px"><strong>Email:</strong> ${adminEmail}</div>
+              <div style="font-size:13px"><strong>Contraseña:</strong> ${adminPassword}</div>
+            </div>
+            <div style="text-align:center">
+              <a href="https://app.genesys.com.ar" style="display:inline-block;background:#0d6efd;color:#fff;font-size:15px;font-weight:700;padding:14px 36px;border-radius:12px;text-decoration:none;">
+                Ingresar al sistema →
+              </a>
+            </div>
+          </div>
+        `,
+      });
+    } catch (emailErr) {
+      console.error('Error enviando email sucursal:', emailErr);
+    }
+
+    return { success: true, branchId, branchName };
+  } catch (e) {
+    throw new HttpsError("internal", e.message);
+  }
+});
+
