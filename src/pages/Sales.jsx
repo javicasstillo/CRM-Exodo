@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { salesApi, phonesApi, buyersApi } from '../api';
-import { Plus, Search, ShoppingCart, Edit2, Trash2, X, Download } from 'lucide-react';
+import { Plus, Search, ShoppingCart, Edit2, Trash2, X, Download, RefreshCw } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import * as XLSX from 'xlsx';
@@ -9,10 +9,15 @@ import { useApp } from '../context/AppContext';
 import { useToast } from '../context/ToastContext';
 
 const fmt = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(n || 0);
-const PAYMENT_METHODS = ['Efectivo', 'Transferencia', 'Cuotas con tarjeta', 'Cuotas sin tarjeta', 'Cripto', 'Mixto'];
+const PAYMENT_METHODS = ['Efectivo', 'Transferencia', 'Cuotas con tarjeta', 'Cuotas sin tarjeta', 'Cripto', 'Mixto', 'Canje'];
 const SOURCES = ['Instagram', 'Facebook', 'TikTok', 'Recomendación', 'WhatsApp', 'Mercado Libre', 'Otro'];
 const EMPTY = { phoneId: '', buyerId: '', salePrice: '', costPrice: '', currency: 'ARS', saleDate: new Date().toISOString().split('T')[0], paymentMethod: 'Efectivo', installments: '', notes: '', status: 'completada', warrantyDays: '30', source: 'Instagram' };
+const EMPTY_CANJE = { model: '', storage: 'N/A', color: '', condition: 'Bueno', imei: '', batteryHealth: '', costPrice: '', diferenciaMonto: '', diferenciaMedio: 'Efectivo', category: 'iPhone' };
 const PAGE_SIZE = 15;
+
+const STORAGE_OPTIONS = ['N/A', '16GB', '32GB', '64GB', '128GB', '256GB', '512GB', '1TB'];
+const CONDITIONS = ['Nuevo', 'Como nuevo', 'Excelente', 'Muy bueno', 'Bueno', 'Regular'];
+const DIFF_METHODS = ['Efectivo', 'Transferencia', 'Cuotas con tarjeta', 'Cuotas sin tarjeta', 'Cripto'];
 
 const DATE_FILTERS = [
   { id: 'todos',         label: 'Todas' },
@@ -33,6 +38,7 @@ async function exportRecibo(sale, phone, buyer, business) {
   const negocioTel = business?.phone || '';
   const negocioDireccion = business?.address || '';
   const negocioWA = business?.whatsapp || '';
+  const esCanje = sale.paymentMethod === 'Canje';
 
   const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
   <style>
@@ -53,6 +59,8 @@ async function exportRecibo(sale, phone, buyer, business) {
     .item label{font-size:10px;font-weight:600;text-transform:uppercase;color:#999;display:block;margin-bottom:2px}
     .item span{font-size:13px;color:#111}
     .badge{display:inline-block;padding:3px 12px;border-radius:20px;font-size:11px;font-weight:700;background:#0d6efd;color:#fff}
+    .canje-box{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px 18px;margin:16px 0}
+    .canje-title{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#16a34a;margin-bottom:10px}
     .watermark{text-align:center;margin-top:30px;padding-top:16px;border-top:1px solid #eee;font-size:10px;color:#bbb;letter-spacing:2px;text-transform:uppercase}
     .watermark span{color:#0d6efd;font-weight:700}
   </style></head><body>
@@ -84,7 +92,6 @@ async function exportRecibo(sale, phone, buyer, business) {
       <div class="item"><label>Color</label><span>${phone?.color || '—'}</span></div>
       <div class="item"><label>Condición</label><span>${phone?.condition || '—'}</span></div>
       ${phone?.imei ? `<div class="item"><label>IMEI</label><span>${phone.imei}</span></div>` : ''}
-      ${phone?.serial ? `<div class="item"><label>Serial</label><span>${phone.serial}</span></div>` : ''}
       ${phone?.batteryHealth ? `<div class="item"><label>Batería</label><span>${phone.batteryHealth}%</span></div>` : ''}
     </div>
   </div>
@@ -106,6 +113,20 @@ async function exportRecibo(sale, phone, buyer, business) {
       ${sale.vendedorName ? `<div class="item"><label>Vendedor</label><span>${sale.vendedorName}</span></div>` : ''}
     </div>
   </div>
+  ${esCanje && sale.canjeData ? `
+  <div class="canje-box">
+    <div class="canje-title">🔄 Equipo recibido en canje</div>
+    <div class="grid">
+      <div class="item"><label>Modelo</label><span>${sale.canjeData.model || '—'}</span></div>
+      ${sale.canjeData.storage && sale.canjeData.storage !== 'N/A' ? `<div class="item"><label>Almacenamiento</label><span>${sale.canjeData.storage}</span></div>` : ''}
+      <div class="item"><label>Color</label><span>${sale.canjeData.color || '—'}</span></div>
+      <div class="item"><label>Condición</label><span>${sale.canjeData.condition || '—'}</span></div>
+      ${sale.canjeData.imei ? `<div class="item"><label>IMEI</label><span>${sale.canjeData.imei}</span></div>` : ''}
+      ${sale.canjeData.batteryHealth ? `<div class="item"><label>Batería</label><span>${sale.canjeData.batteryHealth}%</span></div>` : ''}
+      <div class="item"><label>Valor del canje</label><span>${fmt(sale.canjeData.costPrice)}</span></div>
+      ${sale.canjeData.diferenciaMonto ? `<div class="item"><label>Diferencia abonada</label><span>${fmt(sale.canjeData.diferenciaMonto)} — ${sale.canjeData.diferenciaMedio}</span></div>` : ''}
+    </div>
+  </div>` : ''}
   ${sale.notes ? `<div class="section"><div class="section-title">Observaciones</div><p style="font-size:13px;color:#444;line-height:1.6">${sale.notes}</p></div>` : ''}
   <div class="watermark">
     Recibo generado el ${new Date().toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })} · Powered by <span>Genesys</span>
@@ -132,7 +153,11 @@ async function exportRecibo(sale, phone, buyer, business) {
 
 function Modal({ sale, phones, buyers, onClose, onSave, saving }) {
   const [form, setForm] = useState(sale || EMPTY);
+  const [canjeForm, setCanjeForm] = useState(sale?.canjeData || { ...EMPTY_CANJE });
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const setCanje = (k, v) => setCanjeForm(f => ({ ...f, [k]: v }));
+
+  const esCanje = form.paymentMethod === 'Canje';
 
   const handlePhone = (id) => {
     const p = phones.find(p => p.id === id);
@@ -141,9 +166,16 @@ function Modal({ sale, phones, buyers, onClose, onSave, saving }) {
 
   const ganancia = form.salePrice && form.costPrice ? Number(form.salePrice) - Number(form.costPrice) : null;
 
+  const handleSaveForm = () => {
+    if (!form.phoneId || !form.salePrice) return;
+    const finalForm = { ...form };
+    if (esCanje) finalForm.canjeData = { ...canjeForm };
+    onSave(finalForm);
+  };
+
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal" style={{ maxWidth: 620 }}>
+      <div className="modal" style={{ maxWidth: 640 }}>
         <div className="modal-header">
           <h3>{sale ? 'Editar Venta' : 'Registrar Venta'}</h3>
           <button className="btn btn-sm btn-secondary" onClick={onClose}><X size={14} /></button>
@@ -213,6 +245,76 @@ function Modal({ sale, phones, buyers, onClose, onSave, saving }) {
             </div>
           </div>
 
+          {/* ── Sección canje ── */}
+          {esCanje && (
+            <div style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 12, padding: '16px 18px', marginBottom: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                <RefreshCw size={15} color="#16a34a" />
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#16a34a' }}>Equipo recibido en canje</div>
+              </div>
+
+              <div className="form-grid form-grid-2" style={{ marginBottom: 10 }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Modelo del equipo recibido</label>
+                  <input className="form-input" placeholder="Ej: iPhone 13 Pro" value={canjeForm.model} onChange={e => setCanje('model', e.target.value)} />
+                </div>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Almacenamiento</label>
+                  <select className="form-input" value={canjeForm.storage} onChange={e => setCanje('storage', e.target.value)}>
+                    {STORAGE_OPTIONS.map(s => <option key={s}>{s}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div className="form-grid form-grid-3" style={{ marginBottom: 10 }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Color</label>
+                  <input className="form-input" placeholder="Negro" value={canjeForm.color} onChange={e => setCanje('color', e.target.value)} />
+                </div>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Condición</label>
+                  <select className="form-input" value={canjeForm.condition} onChange={e => setCanje('condition', e.target.value)}>
+                    {CONDITIONS.map(c => <option key={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Batería (%)</label>
+                  <input className="form-input" type="number" min="0" max="100" placeholder="85" value={canjeForm.batteryHealth} onChange={e => setCanje('batteryHealth', e.target.value)} />
+                </div>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: 10 }}>
+                <label className="form-label">IMEI (opcional)</label>
+                <input className="form-input" placeholder="352xxx..." value={canjeForm.imei} onChange={e => setCanje('imei', e.target.value)} />
+              </div>
+
+              <div style={{ borderTop: '1px solid #bbf7d0', paddingTop: 12, marginTop: 4 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#16a34a', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1 }}>Valorización del canje</div>
+                <div className="form-grid form-grid-3">
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Valor del equipo recibido</label>
+                    <input className="form-input" type="number" placeholder="0" value={canjeForm.costPrice} onChange={e => setCanje('costPrice', e.target.value)} />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Diferencia que paga el cliente</label>
+                    <input className="form-input" type="number" placeholder="0" value={canjeForm.diferenciaMonto} onChange={e => setCanje('diferenciaMonto', e.target.value)} />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Medio de la diferencia</label>
+                    <select className="form-input" value={canjeForm.diferenciaMedio} onChange={e => setCanje('diferenciaMedio', e.target.value)}>
+                      {DIFF_METHODS.map(m => <option key={m}>{m}</option>)}
+                    </select>
+                  </div>
+                </div>
+                {canjeForm.costPrice && canjeForm.diferenciaMonto && (
+                  <div style={{ marginTop: 10, fontSize: 12, color: '#16a34a', fontWeight: 600 }}>
+                    Total recibido: {fmt(Number(canjeForm.costPrice) + Number(canjeForm.diferenciaMonto))} ({fmt(canjeForm.costPrice)} en canje + {fmt(canjeForm.diferenciaMonto)} en {canjeForm.diferenciaMedio})
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="form-grid form-grid-3">
             <div className="form-group">
               <label className="form-label">Fecha de venta</label>
@@ -247,7 +349,7 @@ function Modal({ sale, phones, buyers, onClose, onSave, saving }) {
         </div>
         <div className="modal-footer">
           <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
-          <button className="btn btn-primary" disabled={saving} onClick={() => { if (form.phoneId && form.salePrice) onSave(form); }}>
+          <button className="btn btn-primary" disabled={saving} onClick={handleSaveForm}>
             {saving ? 'Guardando...' : sale ? 'Guardar' : 'Registrar venta'}
           </button>
         </div>
@@ -316,36 +418,57 @@ export default function Sales() {
   const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const handleSave = async (form) => {
-  setSaving(true);
-  try {
-    if (modal === 'new') {
-      await salesApi.add({
-        ...form,
-        vendedorId: profile?.id || '',
-        vendedorName: profile?.name || '',
-      });
+    setSaving(true);
+    try {
+      if (modal === 'new') {
+        await salesApi.add({
+          ...form,
+          vendedorId: profile?.id || '',
+          vendedorName: profile?.name || '',
+        });
 
-      // Leer el phone directo de Firestore para tener la cantidad real
-      if (form.phoneId) {
-        const phone = await phonesApi.getOne(form.phoneId);
-        if (phone) {
-          const qty = Number(phone.quantity) || 1;
-          if (qty > 1) {
-            await phonesApi.update(form.phoneId, { quantity: qty - 1 });
-          } else {
-            await phonesApi.update(form.phoneId, { status: 'vendido', quantity: 0 });
+        // Descontar stock del equipo vendido
+        if (form.phoneId) {
+          const phone = await phonesApi.getOne(form.phoneId);
+          if (phone) {
+            const qty = Number(phone.quantity) || 1;
+            if (qty > 1) {
+              await phonesApi.update(form.phoneId, { quantity: qty - 1 });
+            } else {
+              await phonesApi.update(form.phoneId, { status: 'vendido', quantity: 0 });
+            }
           }
         }
-      }
 
-      toast('Venta registrada correctamente', 'success');
-    } else {
-      await salesApi.update(modal.id, form);
-      toast('Venta actualizada', 'success');
-    }
-    setModal(null);
-  } catch (e) { toast(e.message, 'error'); } finally { setSaving(false); }
-};
+        // Si es canje, agregar el equipo recibido al stock
+        if (form.paymentMethod === 'Canje' && form.canjeData?.model) {
+          await phonesApi.add({
+            model: form.canjeData.model,
+            category: form.canjeData.category || 'iPhone',
+            storage: form.canjeData.storage || 'N/A',
+            color: form.canjeData.color || '',
+            condition: form.canjeData.condition || 'Bueno',
+            imei: form.canjeData.imei || '',
+            batteryHealth: form.canjeData.batteryHealth || '',
+            costPrice: form.canjeData.costPrice || '',
+            salePrice: '',
+            currency: 'ARS',
+            status: 'disponible',
+            quantity: 1,
+            notes: `Recibido en canje — ${form.saleDate}`,
+            photo: null,
+          });
+          toast('Venta registrada y equipo recibido agregado al stock', 'success');
+        } else {
+          toast('Venta registrada correctamente', 'success');
+        }
+      } else {
+        await salesApi.update(modal.id, form);
+        toast('Venta actualizada', 'success');
+      }
+      setModal(null);
+    } catch (e) { toast(e.message, 'error'); } finally { setSaving(false); }
+  };
 
   const handleDelete = async (id) => {
     if (!confirm('¿Eliminar esta venta?')) return;
@@ -376,6 +499,10 @@ export default function Sales() {
         'Ganancia': Number(s.salePrice || 0) - Number(s.costPrice || 0),
         'Forma de pago': s.paymentMethod || '—',
         'Cuotas': s.installments || '—',
+        'Canje — Equipo recibido': s.canjeData?.model || '—',
+        'Canje — Valor': s.canjeData?.costPrice || '—',
+        'Canje — Diferencia': s.canjeData?.diferenciaMonto || '—',
+        'Canje — Medio diferencia': s.canjeData?.diferenciaMedio || '—',
         'Origen': s.source || '—',
         'Estado': s.status,
         'Garantía (días)': s.warrantyDays || 30,
@@ -392,7 +519,7 @@ export default function Sales() {
   const totalIngresos = sales.filter(s => s.status === 'completada').reduce((a, s) => a + Number(s.salePrice || 0), 0);
   const totalGanancia = sales.filter(s => s.status === 'completada').reduce((a, s) => a + (Number(s.salePrice || 0) - Number(s.costPrice || 0)), 0);
   const statusBadge = { completada: 'badge-green', pendiente: 'badge-yellow', cancelada: 'badge-red' };
-  const payIcon = { 'Efectivo': '💵', 'Transferencia': '📲', 'Cuotas con tarjeta': '💳', 'Cuotas sin tarjeta': '📅', 'Cripto': '₿', 'Mixto': '🔀' };
+  const payIcon = { 'Efectivo': '💵', 'Transferencia': '📲', 'Cuotas con tarjeta': '💳', 'Cuotas sin tarjeta': '📅', 'Cripto': '₿', 'Mixto': '🔀', 'Canje': '🔄' };
 
   return (
     <>
@@ -472,11 +599,17 @@ export default function Sales() {
                     const phone = getPhone(s.phoneId);
                     const buyer = getBuyer(s.buyerId);
                     const ganancia = Number(s.salePrice || 0) - Number(s.costPrice || 0);
+                    const esCanje = s.paymentMethod === 'Canje';
                     return (
                       <tr key={s.id}>
                         <td>
                           <div style={{ fontWeight: 500 }}>{phone?.model || '—'}</div>
                           <div style={{ fontSize: 11, color: 'var(--text3)' }}>{phone?.storage} · {phone?.color}</div>
+                          {esCanje && s.canjeData?.model && (
+                            <div style={{ fontSize: 10, color: '#16a34a', fontWeight: 600, marginTop: 2 }}>
+                              🔄 {s.canjeData.model} {s.canjeData.storage !== 'N/A' ? `· ${s.canjeData.storage}` : ''}
+                            </div>
+                          )}
                         </td>
                         <td style={{ fontSize: 13 }}>{buyer?.name || '—'}</td>
                         {isPyme && (
@@ -493,6 +626,11 @@ export default function Sales() {
                           <div style={{ fontSize: 12 }}>
                             {payIcon[s.paymentMethod] || ''} {s.paymentMethod}
                             {s.installments && <span style={{ color: 'var(--text3)' }}> · {s.installments}c</span>}
+                            {esCanje && s.canjeData?.diferenciaMonto && (
+                              <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 2 }}>
+                                +{fmt(s.canjeData.diferenciaMonto)} {s.canjeData.diferenciaMedio}
+                              </div>
+                            )}
                           </div>
                         </td>
                         <td>{s.source ? <SourceLabel source={s.source} /> : '—'}</td>
