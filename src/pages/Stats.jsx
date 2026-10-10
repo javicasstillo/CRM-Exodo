@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { salesApi, phonesApi, expensesApi } from '../api';
 import { SourceLabel } from '../components/SourceIcon';
-import { TrendingUp, DollarSign, ShoppingCart, BarChart2, Lock, Users } from 'lucide-react';
+import { TrendingUp, DollarSign, ShoppingCart, BarChart2, Lock, Users, Calendar } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 const fmt = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(n || 0);
 const MONTH_NAMES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const MONTH_NAMES_FULL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
 const SOURCE_COLORS = {
   'Instagram':     '#e1306c',
@@ -58,13 +59,84 @@ function BarChart({ data }) {
           return (
             <div key={m.key} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, cursor: 'pointer' }}
               onMouseEnter={() => setHovered(i)} onMouseLeave={() => setHovered(null)}>
-              <div style={{ width: '100%', height: h, borderRadius: '6px 6px 3px 3px', background: isHov ? 'linear-gradient(180deg, #3d8bfd, #0d6efd)' : 'linear-gradient(180deg, rgba(13,110,253,0.7), rgba(13,110,253,0.4))', transition: 'all 0.2s ease', transform: isHov ? 'scaleY(1.03)' : 'scaleY(1)', transformOrigin: 'bottom', position: 'relative', overflow: 'hidden' }}>
-                {isHov && <div style={{ position: 'absolute', top: 0, left: '-60%', width: '40%', height: '100%', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)', animation: 'shimmer 1s' }} />}
-              </div>
+              <div style={{ width: '100%', height: h, borderRadius: '6px 6px 3px 3px', background: isHov ? 'linear-gradient(180deg, #3d8bfd, #0d6efd)' : 'linear-gradient(180deg, rgba(13,110,253,0.7), rgba(13,110,253,0.4))', transition: 'all 0.2s ease', transform: isHov ? 'scaleY(1.03)' : 'scaleY(1)', transformOrigin: 'bottom' }} />
               <span style={{ fontSize: 9, color: isHov ? 'var(--primary)' : 'var(--text3)', fontWeight: 700, whiteSpace: 'nowrap' }}>{m.label.split(' ')[0]}</span>
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+// ── Gráfico de barras por día del mes ────────────────────────────────
+function DailyBarChart({ data, mesLabel }) {
+  const max = Math.max(...data.map(d => d.profit), 1);
+  const [hovered, setHovered] = useState(null);
+  const H = 140;
+
+  if (data.every(d => d.profit === 0)) return (
+    <p style={{ color: 'var(--text3)', fontSize: 13, textAlign: 'center', padding: '40px 0' }}>
+      Sin ventas en {mesLabel}
+    </p>
+  );
+
+  return (
+    <div style={{ position: 'relative' }}>
+      {hovered !== null && data[hovered]?.profit > 0 && (
+        <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 14px', fontSize: 12, boxShadow: 'var(--shadow-md)', zIndex: 10, whiteSpace: 'nowrap', pointerEvents: 'none' }}>
+          <div style={{ fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>Día {data[hovered]?.day}</div>
+          <div style={{ color: 'var(--primary)', fontWeight: 700 }}>Ganancia: {fmt(data[hovered]?.profit)}</div>
+          <div style={{ color: 'var(--text3)', fontSize: 11 }}>Ingresos: {fmt(data[hovered]?.revenue)} · {data[hovered]?.count} venta{data[hovered]?.count !== 1 ? 's' : ''}</div>
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: 3, alignItems: 'flex-end', height: H + 28, paddingTop: 48, overflowX: 'auto' }}>
+        {data.map((d, i) => {
+          const h = d.profit > 0 ? Math.max(6, (d.profit / max) * H) : 4;
+          const isHov = hovered === i;
+          const isToday = d.isToday;
+          const hasData = d.profit > 0;
+          return (
+            <div key={d.day}
+              style={{ minWidth: 20, flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, cursor: hasData ? 'pointer' : 'default' }}
+              onMouseEnter={() => setHovered(i)}
+              onMouseLeave={() => setHovered(null)}>
+              <div style={{
+                width: '100%', height: h,
+                borderRadius: '4px 4px 2px 2px',
+                background: isToday
+                  ? 'linear-gradient(180deg, #16a34a, #15803d)'
+                  : hasData
+                    ? isHov
+                      ? 'linear-gradient(180deg, #3d8bfd, #0d6efd)'
+                      : 'linear-gradient(180deg, rgba(13,110,253,0.75), rgba(13,110,253,0.4))'
+                    : 'var(--bg3)',
+                transition: 'all 0.15s ease',
+                transform: isHov && hasData ? 'scaleY(1.04)' : 'scaleY(1)',
+                transformOrigin: 'bottom',
+              }} />
+              <span style={{
+                fontSize: 8,
+                color: isToday ? '#16a34a' : isHov ? 'var(--primary)' : 'var(--text3)',
+                fontWeight: isToday || isHov ? 700 : 500,
+              }}>{d.day}</span>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ display: 'flex', gap: 16, marginTop: 12, fontSize: 11, color: 'var(--text3)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <div style={{ width: 10, height: 10, borderRadius: 3, background: 'linear-gradient(180deg, #16a34a, #15803d)' }} />
+          Hoy
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <div style={{ width: 10, height: 10, borderRadius: 3, background: 'rgba(13,110,253,0.5)' }} />
+          Con ventas
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <div style={{ width: 10, height: 10, borderRadius: 3, background: 'var(--bg3)' }} />
+          Sin ventas
+        </div>
       </div>
     </div>
   );
@@ -148,9 +220,7 @@ function HorizontalBars({ data }) {
               </div>
             </div>
             <div style={{ height: 8, background: 'var(--bg3)', borderRadius: 20, overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${pct}%`, borderRadius: 20, background: i === 0 ? 'linear-gradient(90deg, #0d6efd, #3d8bfd)' : isHov ? 'linear-gradient(90deg, var(--primary), #3d8bfd)' : 'linear-gradient(90deg, var(--border2), var(--border))', transition: 'all 0.3s ease', position: 'relative', overflow: 'hidden' }}>
-                <div style={{ position: 'absolute', top: 0, left: '-60%', width: '40%', height: '100%', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)', animation: 'shimmer 2s infinite' }} />
-              </div>
+              <div style={{ height: '100%', width: `${pct}%`, borderRadius: 20, background: i === 0 ? 'linear-gradient(90deg, #0d6efd, #3d8bfd)' : isHov ? 'linear-gradient(90deg, var(--primary), #3d8bfd)' : 'linear-gradient(90deg, var(--border2), var(--border))', transition: 'all 0.3s ease' }} />
             </div>
             {isHov && <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 3 }}>Ganancia: {fmt(d.profit)}</div>}
           </div>
@@ -160,7 +230,6 @@ function HorizontalBars({ data }) {
   );
 }
 
-// Ranking de vendedores
 function VendedorBars({ data }) {
   const max = data[0]?.count || 1;
   const [hovered, setHovered] = useState(null);
@@ -269,7 +338,6 @@ export default function Stats() {
     byMonth[key].costs += Number(s.costPrice || 0);
     byMonth[key].profit += Number(s.salePrice || 0) - Number(s.costPrice || 0);
   });
-
   const monthList = Object.entries(byMonth)
     .sort((a, b) => a[0].localeCompare(b[0]))
     .slice(-6)
@@ -277,6 +345,35 @@ export default function Stats() {
       const [year, month] = key.split('-');
       return { key, label: `${MONTH_NAMES[Number(month) - 1]} ${year.slice(2)}`, ...data };
     });
+
+  // ── Ganancia por día del mes actual ──────────────────────────────
+  const now = new Date();
+  const mesActualKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const mesActualLabel = `${MONTH_NAMES_FULL[now.getMonth()]} ${now.getFullYear()}`;
+  const diasEnMes = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const todayStr = now.toISOString().split('T')[0];
+
+  const byDay = {};
+  completed
+    .filter(s => s.saleDate?.startsWith(mesActualKey))
+    .forEach(s => {
+      const day = s.saleDate.split('-')[2];
+      if (!byDay[day]) byDay[day] = { count: 0, revenue: 0, profit: 0 };
+      byDay[day].count++;
+      byDay[day].revenue += Number(s.salePrice || 0);
+      byDay[day].profit += Number(s.salePrice || 0) - Number(s.costPrice || 0);
+    });
+
+  const dailyData = Array.from({ length: diasEnMes }, (_, i) => {
+    const day = String(i + 1).padStart(2, '0');
+    const dateStr = `${mesActualKey}-${day}`;
+    const d = byDay[day] || { count: 0, revenue: 0, profit: 0 };
+    return { day: i + 1, dateStr, isToday: dateStr === todayStr, isFuture: dateStr > todayStr, ...d };
+  });
+
+  const totalGananciaMes = dailyData.reduce((a, d) => a + d.profit, 0);
+  const diasConVentas = dailyData.filter(d => d.profit > 0).length;
+  const mejorDia = dailyData.reduce((best, d) => d.profit > best.profit ? d : best, { profit: 0, day: 0 });
 
   return (
     <>
@@ -311,6 +408,23 @@ export default function Stats() {
             <div className="stat-value" style={{ fontSize: 19 }}>{fmt(ticketProm)}</div>
             <div className="stat-sub">Por venta</div>
           </div>
+        </div>
+
+        {/* ── NUEVO: Ganancia por día del mes actual ── */}
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <div>
+              <h3 style={{ fontSize: 15, fontWeight: 700 }}>Ganancia por día — {mesActualLabel}</h3>
+              <p style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>
+                {diasConVentas} días con ventas · Total: {fmt(totalGananciaMes)}
+                {mejorDia.profit > 0 && ` · Mejor día: ${mejorDia.day} (${fmt(mejorDia.profit)})`}
+              </p>
+            </div>
+            <div style={{ width: 32, height: 32, borderRadius: 10, background: 'var(--primary-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Calendar size={15} color="var(--primary)" />
+            </div>
+          </div>
+          <DailyBarChart data={dailyData} mesLabel={mesActualLabel} />
         </div>
 
         {/* FILA 1 — Ganancias por mes + Origen clientes */}
@@ -365,7 +479,6 @@ export default function Stats() {
             </div>
           )}
 
-          {/* Ranking vendedores — solo Pyme y Empresa */}
           {isBasic ? (
             <LockedCard title="Ranking de vendedores" />
           ) : (
@@ -429,5 +542,5 @@ export default function Stats() {
 
       </div>
     </>
-  ); 
+  );
 }
