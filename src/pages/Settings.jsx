@@ -347,13 +347,15 @@ export default function Settings() {
     </>
   );
 
- const TABS = [
+const isBranch = !!business?.parentBusinessId;
+
+const TABS = [
   { id: 'negocio',     label: 'Negocio',     icon: Building2  },
   { id: 'perfil',      label: 'Mi perfil',   icon: Users      },
   { id: 'usuarios',    label: 'Usuarios',    icon: Shield     },
   { id: 'catalogo',    label: 'Catálogo',    icon: Globe      },
-  { id: 'suscripcion', label: 'Suscripción', icon: CreditCard },
-  ...(plan === 'empresa' ? [{ id: 'sucursales', label: 'Sucursales', icon: Building2 }] : []),
+  ...(!isBranch ? [{ id: 'suscripcion', label: 'Suscripción', icon: CreditCard }] : []),
+  ...(!isBranch && plan === 'empresa' ? [{ id: 'sucursales', label: 'Sucursales', icon: Building2 }] : []),
 ];
 
   return (

@@ -16,7 +16,11 @@ export default function Header({ profile, business, onNavigate, onLogout }) {
   const { branches, activeBranchId, activeBusiness, switchBranch } = useApp();
   const hasBranches = business?.plan === 'empresa' && branches?.length > 0;
 
-  useEffect(() => phonesApi.subscribe(setPhones), []);
+  // ── FIX: re-suscribir cuando cambia la sucursal activa ──
+  useEffect(() => {
+    const unsub = phonesApi.subscribe(setPhones);
+    return unsub;
+  }, [activeBranchId]);
 
   useEffect(() => {
     const handler = (e) => {
@@ -44,7 +48,6 @@ export default function Header({ profile, business, onNavigate, onLogout }) {
       position: 'sticky', top: 0, zIndex: 50,
     }}>
 
-      {/* Selector de sucursal o nombre del negocio */}
       {hasBranches ? (
         <div ref={branchRef} style={{ position: 'relative', flex: 1 }}>
           <button
@@ -75,7 +78,6 @@ export default function Header({ profile, business, onNavigate, onLogout }) {
               borderRadius: 12, minWidth: 240, boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
               overflow: 'hidden', zIndex: 200,
             }}>
-              {/* Negocio maestro */}
               <button
                 className="dropdown-item"
                 style={{ background: !activeBranchId ? 'var(--primary-bg)' : undefined, color: !activeBranchId ? 'var(--primary)' : undefined }}
@@ -90,7 +92,6 @@ export default function Header({ profile, business, onNavigate, onLogout }) {
 
               <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
 
-              {/* Sucursales */}
               {branches.map(b => (
                 <button
                   key={b.id}
@@ -108,7 +109,6 @@ export default function Header({ profile, business, onNavigate, onLogout }) {
 
               <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
 
-              {/* Panel consolidado */}
               <button
                 className="dropdown-item"
                 onClick={() => { onNavigate('branchPanel'); setBranchOpen(false); }}>
@@ -129,7 +129,7 @@ export default function Header({ profile, business, onNavigate, onLogout }) {
         </div>
       )}
 
-      {/* Alertas de stock */}
+      {/* Alertas de stock — usa phones de la sucursal activa */}
       {lowStock.length > 0 && business?.plan !== 'emprendedor' && (
         <button
           className="stock-alert-btn"
@@ -145,7 +145,6 @@ export default function Header({ profile, business, onNavigate, onLogout }) {
         </button>
       )}
 
-      {/* Usuario + menú */}
       <div ref={menuRef} style={{ position: 'relative' }}>
         <button
           onClick={() => setMenuOpen(o => !o)}
