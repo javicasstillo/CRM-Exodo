@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { getUserProfile, getBusinessConfig, saveBusinessConfig } from '../firebase';
 import { setBusinessId } from '../api';
 import { getFunctions, httpsCallable } from 'firebase/functions';
@@ -15,9 +15,12 @@ export function AppProvider({ user, children }) {
   const [isNewBusiness, setIsNewBusiness] = useState(false);
 
   // ── Sucursales ──────────────────────────────────────────────────────
-  const [branches, setBranches]               = useState([]); // lista de sucursales del maestro
-  const [activeBranchId, setActiveBranchId]   = useState(null); // null = negocio maestro
-  const [activeBusiness, setActiveBusiness]   = useState(null); // negocio activo (maestro o sucursal)
+  const [branches, setBranches]             = useState([]);
+  const [activeBranchId, setActiveBranchId] = useState(null);
+  const [activeBusiness, setActiveBusiness] = useState(null);
+
+  // ── FIX bug 1: callback para forzar re-render de páginas al cambiar sucursal ──
+  const [branchVersion, setBranchVersion] = useState(0);
 
   useEffect(() => {
     if (!user) { setLoading(false); return; }
@@ -73,19 +76,26 @@ export function AppProvider({ user, children }) {
         setIsNewBusiness(true);
       }
 
-      // Cargar sucursales si es plan Empresa
       if (biz?.plan === 'empresa' && biz?.branches?.length > 0) {
         setBranches(biz.branches);
       }
 
-      try {
-        const functions = getFunctions(undefined, 'us-central1');
-        const getStatus = httpsCallable(functions, 'getBusinessStatus');
-        const result = await getStatus();
-        setSubStatus(result.data.status);
-        setTrialDays(result.data.trialDaysLeft);
-      } catch (e) {
-        setSubStatus(biz?.status || 'trial');
+      // ── FIX bug 3: no verificar suscripción para sucursales ──
+      // Las sucursales tienen parentBusinessId — no son clientes independientes
+      if (!biz?.parentBusinessId) {
+        try {
+          const functions = getFunctions(undefined, 'us-central1');
+          const getStatus = httpsCallable(functions, 'getBusinessStatus');
+          const result = await getStatus();
+          setSubStatus(result.data.status);
+          setTrialDays(result.data.trialDaysLeft);
+        } catch (e) {
+          setSubStatus(biz?.status || 'trial');
+          setTrialDays(null);
+        }
+      } else {
+        // Es una sucursal — status siempre activo, hereda del maestro
+        setSubStatus('active');
         setTrialDays(null);
       }
 
@@ -96,20 +106,20 @@ export function AppProvider({ user, children }) {
     }
   };
 
-  // Cambiar de sucursal — actualiza el businessId activo en el api
+  // ── FIX bug 1: switchBranch también incrementa branchVersion para forzar re-render ──
   const switchBranch = async (branchId) => {
     if (branchId === null) {
-      // Volver al negocio maestro
       setActiveBranchId(null);
       setActiveBusiness(business);
       setBusinessId(profile.businessId);
     } else {
-      // Cambiar a una sucursal
       const branchBiz = await getBusinessConfig(branchId);
       setActiveBranchId(branchId);
       setActiveBusiness(branchBiz);
       setBusinessId(branchId);
     }
+    // Incrementar versión fuerza re-mount de páginas y subscriptores
+    setBranchVersion(v => v + 1);
   };
 
   const refreshBusiness = async () => {
@@ -132,10 +142,9 @@ export function AppProvider({ user, children }) {
       subStatus, trialDays,
       isNewBusiness, setIsNewBusiness,
       refreshBusiness, refreshProfile,
-      // Sucursales
       branches, activeBranchId, activeBusiness,
-      switchBranch,
-      isMasterViewing: activeBranchId !== null, // true cuando el maestro está viendo una sucursal
+      switchBranch, branchVersion,
+      isMasterViewing: activeBranchId !== null,
     }}>
       {children}
     </AppContext.Provider>

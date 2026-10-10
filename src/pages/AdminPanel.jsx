@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { collection, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, query, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useToast } from '../context/ToastContext';
-import { Users, DollarSign, TrendingUp, AlertTriangle, CheckCircle, XCircle, Clock, Search, RefreshCw } from 'lucide-react';
+import { Users, DollarSign, TrendingUp, AlertTriangle, CheckCircle, XCircle, Clock, Search, Building2 } from 'lucide-react';
 
 const fmt = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(n || 0);
 
@@ -12,9 +12,6 @@ const STATUS_BG    = { trial: '#fffbeb', active: '#f0fdf4', suspended: '#fff1f1'
 
 const PLAN_LABELS  = { emprendedor: 'Emprendedor', pyme: 'Pyme', empresa: 'Empresa' };
 const PLAN_PRICES  = { emprendedor: 20000, pyme: 35000, empresa: 60000 };
-
-// Tu UID de superadmin — solo vos podés ver este panel
-const SUPER_ADMIN_UID = '5aHXAuMsBxPTlmyW9kDSM4tGXNX2';
 
 export default function AdminPanel() {
   const [businesses, setBusinesses] = useState([]);
@@ -52,7 +49,11 @@ export default function AdminPanel() {
     } catch (e) { toast(e.message, 'error'); }
   };
 
-  const filtered = businesses.filter(b => {
+  // ── FIX bug 4: separar negocios principales de sucursales ──
+  const mainBusinesses = businesses.filter(b => !b.parentBusinessId);
+  const branchBusinesses = businesses.filter(b => !!b.parentBusinessId);
+
+  const filtered = mainBusinesses.filter(b => {
     const owner = getOwner(b.id);
     const q = search.toLowerCase();
     const matchQ = b.name?.toLowerCase().includes(q) || owner?.email?.toLowerCase().includes(q);
@@ -60,13 +61,14 @@ export default function AdminPanel() {
     return matchQ && matchS;
   });
 
-  // KPIs
-  const total     = businesses.length;
-  const activos   = businesses.filter(b => b.status === 'active').length;
-  const trials    = businesses.filter(b => b.status === 'trial').length;
-  const suspendidos = businesses.filter(b => b.status === 'suspended').length;
-  const mrr       = businesses.filter(b => b.status === 'active').reduce((a, b) => a + (PLAN_PRICES[b.plan] || 0), 0);
-  const mrrTrial  = businesses.filter(b => b.status === 'trial').reduce((a, b) => a + (PLAN_PRICES[b.plan] || 0), 0);
+  // KPIs — solo negocios principales
+  const total       = mainBusinesses.length;
+  const activos     = mainBusinesses.filter(b => b.status === 'active').length;
+  const trials      = mainBusinesses.filter(b => b.status === 'trial').length;
+  const suspendidos = mainBusinesses.filter(b => b.status === 'suspended').length;
+  const mrr         = mainBusinesses.filter(b => b.status === 'active').reduce((a, b) => a + (PLAN_PRICES[b.plan] || 0), 0);
+  const mrrTrial    = mainBusinesses.filter(b => b.status === 'trial').reduce((a, b) => a + (PLAN_PRICES[b.plan] || 0), 0);
+  const totalSucursales = branchBusinesses.length;
 
   if (loading) return (
     <div style={{ padding: 28 }}>
@@ -85,10 +87,10 @@ export default function AdminPanel() {
       <div className="page-body fade-up">
 
         {/* KPIs */}
-        <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(5,1fr)', marginBottom: 20 }}>
+        <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(6,1fr)', marginBottom: 20 }}>
           <div className="stat-card">
             <div className="stat-icon"><Users size={16} /></div>
-            <div className="stat-label">Total negocios</div>
+            <div className="stat-label">Clientes</div>
             <div className="stat-value">{total}</div>
           </div>
           <div className="stat-card">
@@ -105,6 +107,11 @@ export default function AdminPanel() {
             <div className="stat-icon" style={{ background: '#fff1f1', color: '#dc2626' }}><XCircle size={16} /></div>
             <div className="stat-label">Suspendidos</div>
             <div className="stat-value" style={{ color: '#dc2626' }}>{suspendidos}</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon" style={{ background: 'var(--primary-bg)', color: 'var(--primary)' }}><Building2 size={16} /></div>
+            <div className="stat-label">Sucursales</div>
+            <div className="stat-value">{totalSucursales}</div>
           </div>
           <div className="stat-card">
             <div className="stat-icon"><DollarSign size={16} /></div>
@@ -127,7 +134,7 @@ export default function AdminPanel() {
           ))}
         </div>
 
-        {/* Tabla */}
+        {/* Tabla — solo clientes principales */}
         <div className="table-wrap">
           <table>
             <thead>
@@ -137,18 +144,20 @@ export default function AdminPanel() {
                 <th>Plan</th>
                 <th>Estado</th>
                 <th>Trial / Pago</th>
+                <th>Sucursales</th>
                 <th>Registro</th>
                 <th>Acción</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 && (
-                <tr><td colSpan={7} style={{ textAlign: 'center', padding: 32, color: 'var(--text3)' }}>Sin resultados</td></tr>
+                <tr><td colSpan={8} style={{ textAlign: 'center', padding: 32, color: 'var(--text3)' }}>Sin resultados</td></tr>
               )}
               {filtered.map(biz => {
                 const owner = getOwner(biz.id);
                 const daysLeft = getDaysLeft(biz);
                 const createdAt = biz.createdAt?.toDate ? biz.createdAt.toDate().toLocaleDateString('es-AR') : '—';
+                const sucursalesCuenta = (biz.branches || []).length;
                 return (
                   <tr key={biz.id}>
                     <td>
@@ -186,12 +195,17 @@ export default function AdminPanel() {
                       {biz.status === 'suspended' && <span style={{ fontSize: 11, color: '#dc2626' }}>Sin pago</span>}
                       {biz.status === 'pending_payment' && <span style={{ fontSize: 11, color: 'var(--primary)' }}>Esperando pago</span>}
                     </td>
+                    <td>
+                      {sucursalesCuenta > 0
+                        ? <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: 4 }}><Building2 size={12} /> {sucursalesCuenta}</span>
+                        : <span style={{ fontSize: 11, color: 'var(--text3)' }}>—</span>
+                      }
+                    </td>
                     <td style={{ fontSize: 12, color: 'var(--text2)' }}>{createdAt}</td>
                     <td>
                       <button
                         className={`btn btn-sm ${biz.status === 'active' ? 'btn-danger' : 'btn-secondary'}`}
-                        onClick={() => handleToggleStatus(biz)}
-                        title={biz.status === 'active' ? 'Suspender' : 'Activar'}>
+                        onClick={() => handleToggleStatus(biz)}>
                         {biz.status === 'active' ? <XCircle size={12} /> : <CheckCircle size={12} />}
                         {biz.status === 'active' ? 'Suspender' : 'Activar'}
                       </button>
@@ -204,7 +218,7 @@ export default function AdminPanel() {
         </div>
 
         <div style={{ marginTop: 12, fontSize: 12, color: 'var(--text3)', textAlign: 'right' }}>
-          {filtered.length} de {total} negocios
+          {filtered.length} de {total} clientes · {totalSucursales} sucursales (no mostradas)
         </div>
 
       </div>

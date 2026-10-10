@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { LayoutDashboard, Smartphone, Users, ShoppingCart, TrendingUp, LogOut, DollarSign, Search, X, Bell, Settings, Shield } from 'lucide-react';
 import { phonesApi } from '../api';
+import { useApp } from '../context/AppContext';
 
 const NAV = [
   { id: 'dashboard', label: 'Panel',         icon: LayoutDashboard },
@@ -16,7 +17,18 @@ export default function Sidebar({ page, onNavigate, onLogout, className = '', bu
   const [searchQ, setSearchQ]       = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
 
-  useEffect(() => phonesApi.subscribe(setPhones), []);
+  // ── FIX bug 2: usar activeBranchId para re-suscribirse cuando cambia la sucursal ──
+  const { activeBranchId, activeBusiness } = useApp();
+
+  useEffect(() => {
+    // Cada vez que cambia la sucursal activa, re-suscribimos phonesApi
+    // que ya tiene el businessId correcto seteado por switchBranch
+    const unsub = phonesApi.subscribe(setPhones);
+    return unsub;
+  }, [activeBranchId]); // re-corre cuando cambia de sucursal
+
+  // Usar activeBusiness para mostrar el nombre/logo correcto en el sidebar
+  const displayBusiness = activeBusiness || business;
 
   const lowStock   = phones.filter(p => p.status === 'disponible' && (Number(p.quantity) || 1) < 3);
   const alertCount = lowStock.length;
@@ -38,13 +50,13 @@ export default function Sidebar({ page, onNavigate, onLogout, className = '', bu
         {/* Logo */}
         <div className="sidebar-logo">
           <div className="logo-mark">
-            {business?.logo
-              ? <img src={business.logo} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 8 }} alt="" />
-              : (business?.name?.[0] || 'G').toUpperCase()
+            {displayBusiness?.logo
+              ? <img src={displayBusiness.logo} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 8 }} alt="" />
+              : (displayBusiness?.name?.[0] || 'G').toUpperCase()
             }
           </div>
           <div>
-            <h1 style={{ fontSize: 15, letterSpacing: 1 }}>{business?.name || 'Genesys App'}</h1>
+            <h1 style={{ fontSize: 15, letterSpacing: 1 }}>{displayBusiness?.name || 'Genesys App'}</h1>
             <span>Sistema de gestión</span>
           </div>
         </div>
@@ -112,7 +124,6 @@ export default function Sidebar({ page, onNavigate, onLogout, className = '', bu
             </button>
           ))}
 
-          {/* Configuración — solo admin */}
           {isAdmin && !isSuperAdmin && (
             <>
               <div className="nav-section-label" style={{ marginTop: 8 }}>Admin</div>
@@ -125,7 +136,6 @@ export default function Sidebar({ page, onNavigate, onLogout, className = '', bu
             </>
           )}
 
-          {/* Panel admin — solo superadmin */}
           {isSuperAdmin && (
             <>
               <div className="nav-section-label" style={{ marginTop: 8 }}>Genesys</div>
@@ -144,7 +154,6 @@ export default function Sidebar({ page, onNavigate, onLogout, className = '', bu
           )}
         </nav>
 
-        {/* Alertas stock bajo */}
         {alertCount > 0 && business?.plan !== 'emprendedor' && (
           <div style={{ margin: '0 12px 10px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, padding: '10px 12px' }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: '#f87171', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -159,7 +168,6 @@ export default function Sidebar({ page, onNavigate, onLogout, className = '', bu
           </div>
         )}
 
-        {/* Footer */}
         <div className="sidebar-footer">
           <button className="nav-item" onClick={onLogout} style={{ width: '100%', marginTop: 2 }}>
             <LogOut size={16} /> Cerrar sesión

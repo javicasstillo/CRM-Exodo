@@ -11,6 +11,7 @@ import Stats from './pages/Stats';
 import Settings from './pages/Settings';
 import AdminPanel from './pages/AdminPanel';
 import Catalog from './pages/Catalog';
+import BranchPanel from './pages/BranchPanel';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import OnboardingTour from './components/OnboardingTour';
@@ -18,31 +19,30 @@ import { ToastProvider } from './context/ToastContext';
 import { AppProvider, useApp } from './context/AppContext';
 import SubscriptionGate from './components/SubscriptionGate';
 import { Menu } from 'lucide-react';
-import BranchPanel from './pages/BranchPanel';
 
 const SUPER_ADMIN_UID = '5aHXAuMsBxPTlmyW9kDSM4tGXNX2';
 
 const PAGE_TITLES = {
-  dashboard:  'Panel',
-  phones:     'Stock',
-  buyers:     'Compradores',
-  sales:      'Ventas',
-  expenses:   'Gastos',
-  stats:      'Estadísticas',
-  settings:   'Configuración',
-  admin:      'Admin — Genesys',
+  dashboard:   'Panel',
+  phones:      'Stock',
+  buyers:      'Compradores',
+  sales:       'Ventas',
+  expenses:    'Gastos',
+  stats:       'Estadísticas',
+  settings:    'Configuración',
+  admin:       'Admin — Genesys',
   branchPanel: 'Vista consolidada',
 };
 
 const PAGES = {
-  dashboard:  Dashboard,
-  phones:     Phones,
-  buyers:     Buyers,
-  sales:      Sales,
-  expenses:   Expenses,
-  stats:      Stats,
-  settings:   Settings,
-  admin:      AdminPanel,
+  dashboard:   Dashboard,
+  phones:      Phones,
+  buyers:      Buyers,
+  sales:       Sales,
+  expenses:    Expenses,
+  stats:       Stats,
+  settings:    Settings,
+  admin:       AdminPanel,
   branchPanel: BranchPanel,
 };
 
@@ -68,7 +68,7 @@ function Skeleton() {
 }
 
 function AppShell({ user }) {
-  const { profile, business, loading: appLoading, isNewBusiness, setIsNewBusiness } = useApp();
+  const { profile, business, loading: appLoading, isNewBusiness, setIsNewBusiness, branchVersion } = useApp();
   const [page, setPage]               = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [pageLoading, setPageLoading] = useState(false);
@@ -76,7 +76,6 @@ function AppShell({ user }) {
 
   const isSuperAdmin = user?.uid === SUPER_ADMIN_UID;
 
-  // Si es negocio nuevo, ir a settings y mostrar tour
   useEffect(() => {
     if (!appLoading && isNewBusiness) {
       setPage('settings');
@@ -88,6 +87,13 @@ function AppShell({ user }) {
     document.title = `${PAGE_TITLES[page] || 'Panel'} — ${business?.name || 'Genesys App'}`;
   }, [page, business]);
 
+  // ── FIX bug 1: cuando cambia la sucursal, recargar la página actual ──
+  useEffect(() => {
+    if (branchVersion === 0) return; // ignorar la carga inicial
+    setPageLoading(true);
+    setTimeout(() => setPageLoading(false), 400);
+  }, [branchVersion]);
+
   if (appLoading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', flexDirection: 'column', gap: 16, background: 'var(--bg)' }}>
       <div className="skeleton" style={{ width: 48, height: 48, borderRadius: 12 }} />
@@ -95,6 +101,7 @@ function AppShell({ user }) {
     </div>
   );
 
+  // ── FIX bug 1: usar branchVersion como key fuerza re-mount del componente de página ──
   const PageComponent = PAGES[page] || Dashboard;
   const isAdminPage = page === 'admin';
 
@@ -106,7 +113,6 @@ function AppShell({ user }) {
     setTimeout(() => setPageLoading(false), 350);
   };
 
-  // El tour usa handleNavigate para moverse entre páginas
   const handleTourNavigate = (p) => {
     if (p === page) return;
     setPage(p);
@@ -146,18 +152,17 @@ function AppShell({ user }) {
         />
         {isAdminPage && isSuperAdmin ? (
           <main className="main-content" style={{ flex: 1 }}>
-            {pageLoading ? <Skeleton /> : <PageComponent />}
+            {pageLoading ? <Skeleton /> : <PageComponent key={branchVersion} />}
           </main>
         ) : (
           <SubscriptionGate>
             <main className="main-content" style={{ flex: 1 }}>
-              {pageLoading ? <Skeleton /> : <PageComponent />}
+              {pageLoading ? <Skeleton /> : <PageComponent key={branchVersion} />}
             </main>
           </SubscriptionGate>
         )}
       </div>
 
-      {/* Tour de onboarding */}
       {showTour && (
         <OnboardingTour
           onComplete={handleTourComplete}
@@ -173,12 +178,10 @@ export default function App() {
 
   useEffect(() => onAuthChange(setUser), []);
 
-  // ── Ruta pública del catálogo ──
   if (window.location.pathname.startsWith('/catalogo/')) {
     return <Catalog />;
   }
 
-  // ── Ruta pública de invitaciones ──
   if (window.location.pathname.startsWith('/invite/')) {
     return <ToastProvider><Login /></ToastProvider>;
   }
