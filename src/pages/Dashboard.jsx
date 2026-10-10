@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { phonesApi, salesApi, expensesApi, buyersApi } from '../api';
-import { Smartphone, ShoppingCart, TrendingUp, DollarSign, AlertTriangle, Package, Users } from 'lucide-react';
+import { Smartphone, ShoppingCart, TrendingUp, DollarSign, AlertTriangle, Package, Users, Wallet } from 'lucide-react';
 import { SourceIcon, SourceLabel } from '../components/SourceIcon';
 import { useApp } from '../context/AppContext';
 
@@ -38,11 +38,18 @@ export default function Dashboard() {
   const stock    = phones.filter(p => p.status === 'disponible').reduce((a, p) => a + (Number(p.quantity) || 1), 0);
   const vendidos = phones.filter(p => p.status === 'vendido').length;
 
+  // ── Valor total del stock (costo * cantidad) ──────────────────────
+  const valorStockARS = phones
+    .filter(p => p.status === 'disponible' && (!p.currency || p.currency === 'ARS') && p.costPrice)
+    .reduce((a, p) => a + Number(p.costPrice || 0) * (Number(p.quantity) || 1), 0);
+  const valorStockUSD = phones
+    .filter(p => p.status === 'disponible' && p.currency === 'USD' && p.costPrice)
+    .reduce((a, p) => a + Number(p.costPrice || 0) * (Number(p.quantity) || 1), 0);
+
   // ── Separar ventas por moneda ──────────────────────────────────────
   const completed    = sales.filter(s => s.status === 'completada');
   const completedARS = completed.filter(s => !s.currency || s.currency === 'ARS');
   const completedUSD = completed.filter(s => s.currency === 'USD');
-
   const hasUSD = completedUSD.length > 0;
 
   // Métricas ARS
@@ -53,6 +60,15 @@ export default function Dashboard() {
   const gananciaNeta     = gananciaBrutaARS - totalGastos;
   const margen           = totalIngresosARS > 0 ? ((gananciaBrutaARS / totalIngresosARS) * 100).toFixed(1) : 0;
   const ticketProm       = completedARS.length > 0 ? totalIngresosARS / completedARS.length : 0;
+
+  // ── Liquidez real (descuenta valor de canjes) ──────────────────────
+  // En un canje el cliente paga: valor_canje + diferencia_en_plata
+  // La liquidez real es: precio_venta - valor_canje (solo entra la diferencia en plata)
+  const totalCanjeValor = completedARS
+    .filter(s => s.paymentMethod === 'Canje' && s.canjeData?.costPrice)
+    .reduce((a, s) => a + Number(s.canjeData.costPrice || 0), 0);
+  const liquidezReal = totalIngresosARS - totalCanjeValor;
+  const hayCanjes = completedARS.some(s => s.paymentMethod === 'Canje');
 
   // Métricas USD
   const totalIngresosUSD = completedUSD.reduce((a, s) => a + Number(s.salePrice || 0), 0);
@@ -65,8 +81,6 @@ export default function Dashboard() {
   const ventasMes    = completedARS.filter(s => s.saleDate?.slice(0, 7) === mesActual);
   const ingresosMes  = ventasMes.reduce((a, s) => a + Number(s.salePrice || 0), 0);
   const gananciaMes  = ventasMes.reduce((a, s) => a + (Number(s.salePrice || 0) - Number(s.costPrice || 0)), 0);
-
-  // Este mes USD
   const ventasMesUSD   = completedUSD.filter(s => s.saleDate?.slice(0, 7) === mesActual);
   const gananciaMesUSD = ventasMesUSD.reduce((a, s) => a + (Number(s.salePrice || 0) - Number(s.costPrice || 0)), 0);
 
@@ -77,7 +91,7 @@ export default function Dashboard() {
 
   const byModel = {};
   completed.forEach(s => {
-    if (s.currency && s.currency !== 'ARS') return; // excluir USD del ranking
+    if (s.currency && s.currency !== 'ARS') return;
     const phone = phones.find(p => p.id === s.phoneId);
     const model = phone?.model || 'Desconocido';
     if (!byModel[model]) byModel[model] = { count: 0, profit: 0 };
@@ -151,11 +165,15 @@ export default function Dashboard() {
             <div className="stat-sub">Ticket prom. {fmt(ticketProm)}</div>
           </div>
 
+          {/* ── NUEVO: Valor del stock ── */}
           <div className="stat-card">
             <div className="stat-icon"><Package size={16} /></div>
             <div className="stat-label">Stock</div>
             <div className="stat-value">{stock}</div>
-            <div className="stat-sub">{vendidos} vendidos · {totalProductos} productos</div>
+            <div className="stat-sub">
+              {valorStockARS > 0 ? `${fmt(valorStockARS)} en mercadería` : `${vendidos} vendidos`}
+              {valorStockUSD > 0 && ` · ${fmtUSD(valorStockUSD)} USD`}
+            </div>
           </div>
         </div>
 
@@ -179,6 +197,7 @@ export default function Dashboard() {
                 const buyer   = getBuyer(s.buyerId);
                 const ganancia = Number(s.salePrice || 0) - Number(s.costPrice || 0);
                 const isUSD   = s.currency === 'USD';
+                const esCanje = s.paymentMethod === 'Canje';
                 return (
                   <div key={s.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: 'var(--bg)', borderRadius: 10, border: '1px solid var(--border)', transition: 'background 0.15s' }}
                     onMouseEnter={e => e.currentTarget.style.background = 'var(--bg2)'}
@@ -191,6 +210,7 @@ export default function Dashboard() {
                         <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
                           {phone?.model || '—'}
                           {isUSD && <span style={{ fontSize: 9, fontWeight: 700, background: '#d97706', color: '#fff', padding: '1px 5px', borderRadius: 4 }}>USD</span>}
+                          {esCanje && <span style={{ fontSize: 9, fontWeight: 700, background: '#16a34a', color: '#fff', padding: '1px 5px', borderRadius: 4 }}>🔄</span>}
                         </div>
                         <div style={{ fontSize: 11, color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: 5, marginTop: 1 }}>
                           {buyer?.name || 'Sin comprador'} · {s.saleDate}
@@ -314,7 +334,7 @@ export default function Dashboard() {
             }
           </div>
 
-          {/* Financiero — ARS separado de USD */}
+          {/* Financiero */}
           <div className="card">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <h3 style={{ fontSize: 15, fontWeight: 700 }}>Financiero</h3>
@@ -325,16 +345,18 @@ export default function Dashboard() {
 
             {/* ARS */}
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 8 }}>Pesos ARS</div>
-            <div style={{ display: 'flex', flexDirection: 'column', marginBottom: hasUSD ? 20 : 0 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', marginBottom: 4 }}>
               {[
-                { label: 'Ingresos totales',  value: fmt(totalIngresosARS) },
+                { label: 'Ingresos comerciales', value: fmt(totalIngresosARS), tooltip: 'Precio de venta de todas las operaciones' },
+                ...(hayCanjes ? [{ label: 'Valor canjes recibidos', value: `− ${fmt(totalCanjeValor)}`, highlight: false, orange: true }] : []),
+                { label: hayCanjes ? 'Liquidez real' : 'Ingresos totales', value: fmt(liquidezReal), highlight: hayCanjes },
                 { label: 'Costos de equipos', value: `− ${fmt(totalCostosARS)}` },
-                { label: 'Ganancia bruta',    value: fmt(gananciaBrutaARS), highlight: true },
+                { label: 'Ganancia bruta', value: fmt(gananciaBrutaARS), highlight: true },
                 { label: 'Gastos operativos', value: `− ${fmt(totalGastos)}` },
               ].map((row, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: row.highlight ? '2px solid var(--primary)' : '1px solid var(--border)', fontSize: 12 }}>
-                  <span style={{ color: 'var(--text3)', fontWeight: 500 }}>{row.label}</span>
-                  <span style={{ fontWeight: 700, fontSize: 13, color: row.highlight ? 'var(--primary)' : 'var(--text)' }}>{row.value}</span>
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: row.highlight ? '2px solid var(--primary)' : '1px solid var(--border)', fontSize: 12 }}>
+                  <span style={{ color: row.orange ? '#d97706' : 'var(--text3)', fontWeight: 500 }}>{row.label}</span>
+                  <span style={{ fontWeight: 700, fontSize: 13, color: row.highlight ? 'var(--primary)' : row.orange ? '#d97706' : 'var(--text)' }}>{row.value}</span>
                 </div>
               ))}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0 0' }}>
@@ -343,27 +365,43 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* USD — solo si hay ventas en USD */}
-            {hasUSD && (
-              <>
-                <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16, marginTop: 4 }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: '#d97706', marginBottom: 8 }}>Dólares USD</div>
-                  {[
-                    { label: 'Ingresos USD',  value: fmtUSD(totalIngresosUSD) },
-                    { label: 'Costos USD',    value: `− ${fmtUSD(totalCostosUSD)}` },
-                    { label: 'Ganancia USD',  value: fmtUSD(gananciaBrutaUSD), highlight: true },
-                  ].map((row, i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: row.highlight ? `2px solid #d97706` : '1px solid var(--border)', fontSize: 12 }}>
-                      <span style={{ color: 'var(--text3)', fontWeight: 500 }}>{row.label}</span>
-                      <span style={{ fontWeight: 700, fontSize: 13, color: row.highlight ? '#d97706' : 'var(--text)' }}>{row.value}</span>
-                    </div>
-                  ))}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0 0' }}>
-                    <span style={{ fontWeight: 700, fontSize: 12, color: 'var(--text3)' }}>{completedUSD.length} ventas en USD</span>
-                    <span style={{ fontSize: 16, fontWeight: 800, color: '#d97706' }}>{fmtUSD(gananciaBrutaUSD)}</span>
-                  </div>
+            {/* Valor del stock */}
+            {valorStockARS > 0 && (
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12, marginTop: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 12, color: 'var(--text3)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Package size={12} /> Mercadería en stock
+                  </span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{fmt(valorStockARS)}</span>
                 </div>
-              </>
+                {valorStockUSD > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+                    <span style={{ fontSize: 12, color: 'var(--text3)', fontWeight: 500 }}>Mercadería USD</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: '#d97706' }}>{fmtUSD(valorStockUSD)}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* USD */}
+            {hasUSD && (
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16, marginTop: 8 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: '#d97706', marginBottom: 8 }}>Dólares USD</div>
+                {[
+                  { label: 'Ingresos USD',  value: fmtUSD(totalIngresosUSD) },
+                  { label: 'Costos USD',    value: `− ${fmtUSD(totalCostosUSD)}` },
+                  { label: 'Ganancia USD',  value: fmtUSD(gananciaBrutaUSD), highlight: true },
+                ].map((row, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: row.highlight ? `2px solid #d97706` : '1px solid var(--border)', fontSize: 12 }}>
+                    <span style={{ color: 'var(--text3)', fontWeight: 500 }}>{row.label}</span>
+                    <span style={{ fontWeight: 700, fontSize: 13, color: row.highlight ? '#d97706' : 'var(--text)' }}>{row.value}</span>
+                  </div>
+                ))}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0 0' }}>
+                  <span style={{ fontWeight: 700, fontSize: 12, color: 'var(--text3)' }}>{completedUSD.length} ventas en USD</span>
+                  <span style={{ fontSize: 16, fontWeight: 800, color: '#d97706' }}>{fmtUSD(gananciaBrutaUSD)}</span>
+                </div>
+              </div>
             )}
           </div>
 
