@@ -27,6 +27,11 @@ export default function Dashboard() {
   const plan = business?.plan || 'emprendedor';
   const isBasic = plan === 'emprendedor';
 
+  // ── Configuración de valorización del stock ──
+  // 'costo' = precio de costo (default), 'venta' = precio de venta
+  const stockValuacion = business?.stockValuacion || 'costo';
+  const stockPriceField = stockValuacion === 'venta' ? 'salePrice' : 'costPrice';
+
   useEffect(() => {
     const u1 = phonesApi.subscribe(setPhones);
     const u2 = salesApi.subscribe(setSales);
@@ -38,13 +43,13 @@ export default function Dashboard() {
   const stock    = phones.filter(p => p.status === 'disponible').reduce((a, p) => a + (Number(p.quantity) || 1), 0);
   const vendidos = phones.filter(p => p.status === 'vendido').length;
 
-  // ── Valor total del stock (costo * cantidad) ──────────────────────
+  // ── Valor total del stock según configuración (ARS y USD) ──────────
   const valorStockARS = phones
-    .filter(p => p.status === 'disponible' && (!p.currency || p.currency === 'ARS') && p.costPrice)
-    .reduce((a, p) => a + Number(p.costPrice || 0) * (Number(p.quantity) || 1), 0);
+    .filter(p => p.status === 'disponible' && (!p.currency || p.currency === 'ARS') && p[stockPriceField])
+    .reduce((a, p) => a + Number(p[stockPriceField] || 0) * (Number(p.quantity) || 1), 0);
   const valorStockUSD = phones
-    .filter(p => p.status === 'disponible' && p.currency === 'USD' && p.costPrice)
-    .reduce((a, p) => a + Number(p.costPrice || 0) * (Number(p.quantity) || 1), 0);
+    .filter(p => p.status === 'disponible' && p.currency === 'USD' && p[stockPriceField])
+    .reduce((a, p) => a + Number(p[stockPriceField] || 0) * (Number(p.quantity) || 1), 0);
 
   // ── Separar ventas por moneda ──────────────────────────────────────
   const completed    = sales.filter(s => s.status === 'completada');
@@ -61,21 +66,26 @@ export default function Dashboard() {
   const margen           = totalIngresosARS > 0 ? ((gananciaBrutaARS / totalIngresosARS) * 100).toFixed(1) : 0;
   const ticketProm       = completedARS.length > 0 ? totalIngresosARS / completedARS.length : 0;
 
-  // ── Liquidez real (descuenta valor de canjes) ──────────────────────
-  // En un canje el cliente paga: valor_canje + diferencia_en_plata
-  // La liquidez real es: precio_venta - valor_canje (solo entra la diferencia en plata)
-  const totalCanjeValor = completedARS
+  // ── Liquidez real ARS (descuenta valor de canjes en ARS) ──────────
+  const totalCanjeValorARS = completedARS
     .filter(s => s.paymentMethod === 'Canje' && s.canjeData?.costPrice)
     .reduce((a, s) => a + Number(s.canjeData.costPrice || 0), 0);
-  const liquidezReal = totalIngresosARS - totalCanjeValor;
-  const hayCanjes = completedARS.some(s => s.paymentMethod === 'Canje');
+  const liquidezRealARS = totalIngresosARS - totalCanjeValorARS;
+  const hayCanjesARS = completedARS.some(s => s.paymentMethod === 'Canje');
 
   // Métricas USD
   const totalIngresosUSD = completedUSD.reduce((a, s) => a + Number(s.salePrice || 0), 0);
   const totalCostosUSD   = completedUSD.reduce((a, s) => a + Number(s.costPrice || 0), 0);
   const gananciaBrutaUSD = totalIngresosUSD - totalCostosUSD;
 
-  // Este mes — solo ARS
+  // ── Liquidez real USD (descuenta valor de canjes en USD) ──────────
+  const totalCanjeValorUSD = completedUSD
+    .filter(s => s.paymentMethod === 'Canje' && s.canjeData?.costPrice)
+    .reduce((a, s) => a + Number(s.canjeData.costPrice || 0), 0);
+  const liquidezRealUSD = totalIngresosUSD - totalCanjeValorUSD;
+  const hayCanjesUSD = completedUSD.some(s => s.paymentMethod === 'Canje');
+
+  // Este mes — ARS
   const now       = new Date();
   const mesActual = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const ventasMes    = completedARS.filter(s => s.saleDate?.slice(0, 7) === mesActual);
@@ -110,6 +120,8 @@ export default function Dashboard() {
 
   const stockDisponible = phones.filter(p => p.status === 'disponible');
   const totalProductos  = stockDisponible.length;
+
+  const stockValuacionLabel = stockValuacion === 'venta' ? 'venta' : 'costo';
 
   return (
     <>
@@ -165,13 +177,12 @@ export default function Dashboard() {
             <div className="stat-sub">Ticket prom. {fmt(ticketProm)}</div>
           </div>
 
-          {/* ── NUEVO: Valor del stock ── */}
           <div className="stat-card">
             <div className="stat-icon"><Package size={16} /></div>
             <div className="stat-label">Stock</div>
             <div className="stat-value">{stock}</div>
             <div className="stat-sub">
-              {valorStockARS > 0 ? `${fmt(valorStockARS)} en mercadería` : `${vendidos} vendidos`}
+              {valorStockARS > 0 ? `${fmt(valorStockARS)} (${stockValuacionLabel})` : `${vendidos} vendidos`}
               {valorStockUSD > 0 && ` · ${fmtUSD(valorStockUSD)} USD`}
             </div>
           </div>
@@ -285,14 +296,7 @@ export default function Dashboard() {
                 : topModels.map(([model, data], i) => (
                   <div key={model} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{
-                        width: 24, height: 24, borderRadius: 7, flexShrink: 0,
-                        background: i === 0 ? 'var(--primary)' : 'var(--bg3)',
-                        color: i === 0 ? '#fff' : 'var(--text2)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 11, fontWeight: 700,
-                        boxShadow: i === 0 ? 'var(--shadow-blue)' : 'none',
-                      }}>
+                      <div style={{ width: 24, height: 24, borderRadius: 7, flexShrink: 0, background: i === 0 ? 'var(--primary)' : 'var(--bg3)', color: i === 0 ? '#fff' : 'var(--text2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, boxShadow: i === 0 ? 'var(--shadow-blue)' : 'none' }}>
                         {i + 1}
                       </div>
                       <div>
@@ -347,9 +351,9 @@ export default function Dashboard() {
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 8 }}>Pesos ARS</div>
             <div style={{ display: 'flex', flexDirection: 'column', marginBottom: 4 }}>
               {[
-                { label: 'Ingresos comerciales', value: fmt(totalIngresosARS), tooltip: 'Precio de venta de todas las operaciones' },
-                ...(hayCanjes ? [{ label: 'Valor canjes recibidos', value: `− ${fmt(totalCanjeValor)}`, highlight: false, orange: true }] : []),
-                { label: hayCanjes ? 'Liquidez real' : 'Ingresos totales', value: fmt(liquidezReal), highlight: hayCanjes },
+                { label: 'Ingresos comerciales', value: fmt(totalIngresosARS) },
+                ...(hayCanjesARS ? [{ label: 'Valor canjes recibidos', value: `− ${fmt(totalCanjeValorARS)}`, orange: true }] : []),
+                { label: hayCanjesARS ? 'Liquidez real' : 'Ingresos totales', value: fmt(liquidezRealARS), highlight: hayCanjesARS },
                 { label: 'Costos de equipos', value: `− ${fmt(totalCostosARS)}` },
                 { label: 'Ganancia bruta', value: fmt(gananciaBrutaARS), highlight: true },
                 { label: 'Gastos operativos', value: `− ${fmt(totalGastos)}` },
@@ -366,17 +370,24 @@ export default function Dashboard() {
             </div>
 
             {/* Valor del stock */}
-            {valorStockARS > 0 && (
+            {(valorStockARS > 0 || valorStockUSD > 0) && (
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12, marginTop: 8 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: 12, color: 'var(--text3)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <Package size={12} /> Mercadería en stock
-                  </span>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{fmt(valorStockARS)}</span>
+                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 8 }}>
+                  Mercadería en stock (precio de {stockValuacionLabel})
                 </div>
+                {valorStockARS > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                    <span style={{ fontSize: 12, color: 'var(--text3)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Package size={12} /> ARS
+                    </span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{fmt(valorStockARS)}</span>
+                  </div>
+                )}
                 {valorStockUSD > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
-                    <span style={{ fontSize: 12, color: 'var(--text3)', fontWeight: 500 }}>Mercadería USD</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: 12, color: 'var(--text3)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Package size={12} /> USD
+                    </span>
                     <span style={{ fontSize: 13, fontWeight: 700, color: '#d97706' }}>{fmtUSD(valorStockUSD)}</span>
                   </div>
                 )}
@@ -388,13 +399,15 @@ export default function Dashboard() {
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16, marginTop: 8 }}>
                 <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: '#d97706', marginBottom: 8 }}>Dólares USD</div>
                 {[
-                  { label: 'Ingresos USD',  value: fmtUSD(totalIngresosUSD) },
-                  { label: 'Costos USD',    value: `− ${fmtUSD(totalCostosUSD)}` },
-                  { label: 'Ganancia USD',  value: fmtUSD(gananciaBrutaUSD), highlight: true },
+                  { label: 'Ingresos comerciales USD', value: fmtUSD(totalIngresosUSD) },
+                  ...(hayCanjesUSD ? [{ label: 'Valor canjes USD', value: `− ${fmtUSD(totalCanjeValorUSD)}`, orange: true }] : []),
+                  { label: hayCanjesUSD ? 'Liquidez real USD' : 'Ingresos totales USD', value: fmtUSD(liquidezRealUSD), highlight: hayCanjesUSD },
+                  { label: 'Costos USD', value: `− ${fmtUSD(totalCostosUSD)}` },
+                  { label: 'Ganancia USD', value: fmtUSD(gananciaBrutaUSD), highlight: true },
                 ].map((row, i) => (
                   <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: row.highlight ? `2px solid #d97706` : '1px solid var(--border)', fontSize: 12 }}>
-                    <span style={{ color: 'var(--text3)', fontWeight: 500 }}>{row.label}</span>
-                    <span style={{ fontWeight: 700, fontSize: 13, color: row.highlight ? '#d97706' : 'var(--text)' }}>{row.value}</span>
+                    <span style={{ color: row.orange ? '#d97706' : 'var(--text3)', fontWeight: 500 }}>{row.label}</span>
+                    <span style={{ fontWeight: 700, fontSize: 13, color: row.highlight ? '#d97706' : row.orange ? '#d97706' : 'var(--text)' }}>{row.value}</span>
                   </div>
                 ))}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0 0' }}>
