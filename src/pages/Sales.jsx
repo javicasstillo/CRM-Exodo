@@ -424,7 +424,7 @@ export default function Sales() {
         await salesApi.add({
           ...form,
           vendedorId: profile?.id || '',
-          vendedorName: profile?.name || '',
+          vendedorName: profile?.name?.trim() || '',
         });
 
         // Descontar stock del equipo vendido
