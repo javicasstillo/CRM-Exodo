@@ -54,9 +54,9 @@ export default function MercadoLibre() {
           </div>
         </div>
         {mlConnected && (
-          <a href={`https://www.mercadolibre.com.ar/perfil/${mlUserId}`} target="_blank" rel="noopener noreferrer"
+          <a href={`https://www.mercadolibre.com.ar/ventas/listado`} target="_blank" rel="noopener noreferrer"
             className="btn btn-secondary" style={{ textDecoration: 'none' }}>
-            <ExternalLink size={14} /> Ver mi perfil en ML
+            <ExternalLink size={14} /> Ver mis ventas en ML
           </a>
         )}
       </div>
