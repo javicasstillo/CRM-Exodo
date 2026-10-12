@@ -3,6 +3,7 @@ import { phonesApi } from '../api';
 import { Plus, Search, Smartphone, Edit2, Trash2, X, Camera, ImageOff, Minus } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import { useApp } from '../context/AppContext';
+import PublicarMLModal from '../components/PublicarMLModal';
 
 const fmt = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(n || 0);
 
@@ -63,50 +64,41 @@ const CATEGORIES = {
     'Lenovo Tab M10', 'Lenovo Tab P11',
   ],
   'Computadora': [
-    // Apple
     'MacBook Air M1', 'MacBook Air M2', 'MacBook Air M3',
     'MacBook Pro 13 M2', 'MacBook Pro 14 M3', 'MacBook Pro 14 M4', 'MacBook Pro 16 M3', 'MacBook Pro 16 M4',
     'iMac M1', 'iMac M3', 'iMac M4',
     'Mac Mini M2', 'Mac Mini M4',
     'Mac Studio M2', 'Mac Studio M4',
-    // HP
     'Notebook HP Pavilion 14', 'Notebook HP Pavilion 15', 'Notebook HP Pavilion 16',
     'Notebook HP Envy 13', 'Notebook HP Envy 14', 'Notebook HP Envy 15',
     'Notebook HP EliteBook 840', 'Notebook HP EliteBook 850',
     'Notebook HP ProBook 440', 'Notebook HP ProBook 450',
     'Notebook HP Victus 15', 'Notebook HP Victus 16',
     'Notebook HP OMEN 16',
-    // Dell
     'Notebook Dell Inspiron 14', 'Notebook Dell Inspiron 15', 'Notebook Dell Inspiron 16',
     'Notebook Dell Latitude 5420', 'Notebook Dell Latitude 5520',
     'Notebook Dell XPS 13', 'Notebook Dell XPS 15',
     'Notebook Dell Vostro 14', 'Notebook Dell Vostro 15',
     'Notebook Dell Alienware m15', 'Notebook Dell Alienware m16',
-    // Lenovo
     'Notebook Lenovo IdeaPad 3', 'Notebook Lenovo IdeaPad 5', 'Notebook Lenovo IdeaPad Slim 5',
     'Notebook Lenovo ThinkPad E14', 'Notebook Lenovo ThinkPad E15', 'Notebook Lenovo ThinkPad X1 Carbon',
     'Notebook Lenovo Legion 5', 'Notebook Lenovo Legion 5 Pro', 'Notebook Lenovo Legion 7',
     'Notebook Lenovo Yoga 7', 'Notebook Lenovo Yoga 9',
-    // Asus
     'Notebook Asus VivoBook 14', 'Notebook Asus VivoBook 15', 'Notebook Asus VivoBook 16',
     'Notebook Asus ZenBook 14', 'Notebook Asus ZenBook 15',
     'Notebook Asus ROG Strix G15', 'Notebook Asus ROG Strix G16', 'Notebook Asus ROG Zephyrus G14',
     'Notebook Asus TUF Gaming A15', 'Notebook Asus TUF Gaming F15',
     'Notebook Asus ExpertBook B1',
-    // Acer
     'Notebook Acer Aspire 3', 'Notebook Acer Aspire 5', 'Notebook Acer Aspire 7',
     'Notebook Acer Swift 3', 'Notebook Acer Swift 5',
     'Notebook Acer Nitro 5', 'Notebook Acer Nitro 16',
     'Notebook Acer Predator Helios 300', 'Notebook Acer Predator Helios 16',
-    // MSI
     'Notebook MSI Modern 14', 'Notebook MSI Modern 15',
     'Notebook MSI GF63 Thin', 'Notebook MSI GL65',
     'Notebook MSI Raider GE76', 'Notebook MSI Titan GT77',
-    // PC Armada
     'PC Armada Gamer Entry', 'PC Armada Gamer Mid', 'PC Armada Gamer High',
     'PC Armada Oficina Basic', 'PC Armada Oficina Pro',
     'PC Armada Workstation',
-    // Monitores
     'Monitor 21" Full HD', 'Monitor 24" Full HD', 'Monitor 27" Full HD',
     'Monitor 24" 2K QHD', 'Monitor 27" 2K QHD', 'Monitor 32" 2K QHD',
     'Monitor 27" 4K UHD', 'Monitor 32" 4K UHD',
@@ -140,46 +132,33 @@ const CATEGORIES = {
     'Battery Pack USB-C 5000mAh', 'Battery Pack USB-C 10000mAh', 'Battery Pack USB-C 20000mAh',
   ],
   'Funda': [
-    // iPhone 11
     'Funda iPhone 11', 'Funda iPhone 11 Pro', 'Funda iPhone 11 Pro Max',
-    // iPhone 12
     'Funda iPhone 12', 'Funda iPhone 12 Mini', 'Funda iPhone 12 Pro', 'Funda iPhone 12 Pro Max',
-    // iPhone 13
     'Funda iPhone 13', 'Funda iPhone 13 Mini', 'Funda iPhone 13 Pro', 'Funda iPhone 13 Pro Max',
-    // iPhone 14
     'Funda iPhone 14', 'Funda iPhone 14 Plus', 'Funda iPhone 14 Pro', 'Funda iPhone 14 Pro Max',
-    // iPhone 15
     'Funda iPhone 15', 'Funda iPhone 15 Plus', 'Funda iPhone 15 Pro', 'Funda iPhone 15 Pro Max',
-    // iPhone 16
     'Funda iPhone 16', 'Funda iPhone 16 Plus', 'Funda iPhone 16 Pro', 'Funda iPhone 16 Pro Max',
-    // iPhone 17
     'Funda iPhone 17', 'Funda iPhone 17 Plus', 'Funda iPhone 17 Pro', 'Funda iPhone 17 Pro Max',
-    // Samsung A series
     'Funda Samsung Galaxy A05', 'Funda Samsung Galaxy A14', 'Funda Samsung Galaxy A15',
     'Funda Samsung Galaxy A25', 'Funda Samsung Galaxy A34', 'Funda Samsung Galaxy A35',
     'Funda Samsung Galaxy A54', 'Funda Samsung Galaxy A55',
-    // Samsung S series
     'Funda Samsung Galaxy S23', 'Funda Samsung Galaxy S23+', 'Funda Samsung Galaxy S23 Ultra',
     'Funda Samsung Galaxy S24', 'Funda Samsung Galaxy S24+', 'Funda Samsung Galaxy S24 Ultra',
     'Funda Samsung Galaxy S25', 'Funda Samsung Galaxy S25+', 'Funda Samsung Galaxy S25 Ultra',
     'Funda Samsung Galaxy S26', 'Funda Samsung Galaxy S26+', 'Funda Samsung Galaxy S26 Ultra',
-    // Samsung Z series
     'Funda Samsung Galaxy Z Fold 5', 'Funda Samsung Galaxy Z Fold 6', 'Funda Samsung Galaxy Z Fold 7',
     'Funda Samsung Galaxy Z Flip 5', 'Funda Samsung Galaxy Z Flip 6', 'Funda Samsung Galaxy Z Flip 7',
-    // Motorola
     'Funda Motorola Moto G04', 'Funda Motorola Moto G14', 'Funda Motorola Moto G24',
     'Funda Motorola Moto G34', 'Funda Motorola Moto G54', 'Funda Motorola Moto G84',
     'Funda Motorola Edge 40', 'Funda Motorola Edge 40 Neo', 'Funda Motorola Edge 40 Pro',
     'Funda Motorola Edge 50', 'Funda Motorola Edge 50 Pro', 'Funda Motorola Edge 50 Ultra',
     'Funda Motorola Razr 40', 'Funda Motorola Razr 40 Ultra',
     'Funda Motorola Razr 50', 'Funda Motorola Razr 50 Ultra',
-    // Xiaomi
     'Funda Xiaomi Redmi 12', 'Funda Xiaomi Redmi 12C', 'Funda Xiaomi Redmi 13', 'Funda Xiaomi Redmi 13C',
     'Funda Xiaomi Redmi Note 12', 'Funda Xiaomi Redmi Note 13', 'Funda Xiaomi Redmi Note 13 Pro',
     'Funda Xiaomi 13', 'Funda Xiaomi 13 Pro', 'Funda Xiaomi 13T', 'Funda Xiaomi 13T Pro',
     'Funda Xiaomi 14', 'Funda Xiaomi 14 Pro', 'Funda Xiaomi 14T', 'Funda Xiaomi 14T Pro',
     'Funda POCO X5', 'Funda POCO X5 Pro', 'Funda POCO X6', 'Funda POCO X6 Pro',
-    // Tipos de funda
     'Funda Antigolpe Universal', 'Funda Billetera Universal', 'Funda con MagSafe Universal',
   ],
   'Vidrio Templado': [
@@ -298,7 +277,6 @@ function QuantitySelector({ value, onChange }) {
 }
 
 function Modal({ phone, onClose, onSave, saving }) {
-  // ── FIX: siempre arrancar desde EMPTY para producto nuevo ──
   const [form, setForm] = useState(phone ? { ...EMPTY, ...phone } : { ...EMPTY });
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -317,7 +295,6 @@ function Modal({ phone, onClose, onSave, saving }) {
   const isOtro = form.category === 'Otro';
   const hasModels = CATEGORIES[form.category]?.length > 0;
   const useCustomModel = isOtro || form.model === '__custom__';
-
   const needsStorage = NEEDS_STORAGE.includes(form.category);
   const needsBattery = NEEDS_BATTERY.includes(form.category);
   const needsImei = NEEDS_IMEI.includes(form.category);
@@ -362,34 +339,18 @@ function Modal({ phone, onClose, onSave, saving }) {
             <div className="form-group">
               <label className="form-label">Modelo</label>
               {isOtro || !hasModels ? (
-                <input
-                  className="form-input"
-                  placeholder="Escribí el modelo..."
-                  value={form.customModel || ''}
-                  onChange={e => set('customModel', e.target.value)}
-                />
+                <input className="form-input" placeholder="Escribí el modelo..." value={form.customModel || ''} onChange={e => set('customModel', e.target.value)} />
               ) : (
                 <>
                   <select className="form-input" value={form.model} onChange={e => {
-                    if (e.target.value === '__custom__') {
-                      set('model', '__custom__');
-                    } else {
-                      set('model', e.target.value);
-                      set('customModel', '');
-                    }
+                    if (e.target.value === '__custom__') { set('model', '__custom__'); }
+                    else { set('model', e.target.value); set('customModel', ''); }
                   }}>
                     {CATEGORIES[form.category]?.map(m => <option key={m} value={m}>{m}</option>)}
                     <option value="__custom__">✏️ Escribir modelo...</option>
                   </select>
                   {form.model === '__custom__' && (
-                    <input
-                      className="form-input"
-                      style={{ marginTop: 6 }}
-                      placeholder="Escribí el modelo exacto..."
-                      value={form.customModel || ''}
-                      onChange={e => set('customModel', e.target.value)}
-                      autoFocus
-                    />
+                    <input className="form-input" style={{ marginTop: 6 }} placeholder="Escribí el modelo exacto..." value={form.customModel || ''} onChange={e => set('customModel', e.target.value)} autoFocus />
                   )}
                 </>
               )}
@@ -512,6 +473,7 @@ export default function Phones() {
   const [filterCat, setFilterCat] = useState('todas');
   const [modal, setModal] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [mlModal, setMlModal] = useState(null);
   const toast = useToast();
   const { business } = useApp();
 
@@ -629,6 +591,12 @@ export default function Phones() {
                           🔋 {p.batteryHealth}%
                         </div>
                       )}
+                      {/* Badge ML si ya está publicado */}
+                      {p.mlItemId && (
+                        <div style={{ position: 'absolute', bottom: p.batteryHealth ? 30 : 8, left: 8, background: '#fff200', color: '#333', fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20 }}>
+                          🛒 ML
+                        </div>
+                      )}
                     </div>
                     <div className="phone-card-body">
                       {isLowStock && (
@@ -667,6 +635,15 @@ export default function Phones() {
                       <div className="phone-card-footer">
                         <div className="phone-price">{fmt(p.salePrice)}<span style={{ fontSize: 10, fontFamily: 'Inter', color: 'var(--text3)' }}> {p.currency}</span></div>
                         <div style={{ display: 'flex', gap: 6 }}>
+                          {p.status === 'disponible' && business?.mlConnected && (
+                            <button
+                              className="btn btn-sm btn-secondary"
+                              title={p.mlItemId ? 'Ya publicado en ML' : 'Publicar en Mercado Libre'}
+                              onClick={() => !p.mlItemId && setMlModal(p)}
+                              style={{ background: p.mlItemId ? '#fff200' : undefined, opacity: p.mlItemId ? 0.7 : 1, color: p.mlItemId ? '#333' : undefined }}>
+                              🛒
+                            </button>
+                          )}
                           <button className="btn btn-sm btn-secondary" onClick={() => setModal(p)}><Edit2 size={12} /></button>
                           <button className="btn btn-sm btn-danger" onClick={() => handleDelete(p.id)}><Trash2 size={12} /></button>
                         </div>
@@ -680,6 +657,7 @@ export default function Phones() {
         }
       </div>
       {modal && <Modal phone={modal === 'new' ? null : modal} onClose={() => setModal(null)} onSave={handleSave} saving={saving} />}
+      {mlModal && <PublicarMLModal phone={mlModal} onClose={() => setMlModal(null)} />}
     </>
   );
 }

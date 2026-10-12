@@ -575,3 +575,247 @@ exports.createBranch = onCall(async (request) => {
   }
 });
 
+// ── Agregar al inicio del archivo, junto a las otras constantes ────────
+const ML_CLIENT_ID = process.env.ML_CLIENT_ID;
+const ML_SECRET    = process.env.ML_SECRET;
+const ML_REDIRECT  = 'https://app.genesys.com.ar/ml-callback';
+
+// ── Helper: obtener token de ML vigente (refresca si expiró) ──────────
+async function getMLToken(businessId) {
+  const doc = await db.collection('ml_tokens').doc(businessId).get();
+  if (!doc.exists) throw new Error('No hay cuenta de ML conectada');
+
+  const data = doc.data();
+  const now = Date.now();
+
+  // Si el token expira en menos de 5 minutos, lo refrescamos
+  if (data.expiresAt - now < 5 * 60 * 1000) {
+    const res = await fetch('https://api.mercadolibre.com/oauth/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type:    'refresh_token',
+        client_id:     ML_CLIENT_ID,
+        client_secret: ML_SECRET,
+        refresh_token: data.refreshToken,
+      }),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(`ML refresh error: ${json.message}`);
+
+    const updated = {
+      accessToken:  json.access_token,
+      refreshToken: json.refresh_token,
+      expiresAt:    now + json.expires_in * 1000,
+      mlUserId:     json.user_id,
+    };
+    await db.collection('ml_tokens').doc(businessId).update(updated);
+    return updated.accessToken;
+  }
+
+  return data.accessToken;
+}
+
+// ── 12. Generar URL de autorización de ML ─────────────────────────────
+exports.mlAuthUrl = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError('unauthenticated', 'No autenticado');
+
+  const userDoc = await db.collection('users').doc(uid).get();
+  if (!userDoc.exists) throw new HttpsError('not-found', 'Usuario no encontrado');
+  const businessId = userDoc.data().businessId;
+
+  const url = `https://auth.mercadolibre.com.ar/authorization?response_type=code&client_id=${ML_CLIENT_ID}&redirect_uri=${encodeURIComponent(ML_REDIRECT)}&state=${businessId}`;
+  return { url };
+});
+
+// ── 13. Callback de ML (recibe el code y guarda el token) ─────────────
+exports.mlCallback = onRequest(async (req, res) => {
+  const { code, state: businessId } = req.query;
+
+  if (!code || !businessId) {
+    res.redirect('https://app.genesys.com.ar?ml=error');
+    return;
+  }
+
+  try {
+    const tokenRes = await fetch('https://api.mercadolibre.com/oauth/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type:    'authorization_code',
+        client_id:     ML_CLIENT_ID,
+        client_secret: ML_SECRET,
+        code,
+        redirect_uri:  ML_REDIRECT,
+      }),
+    });
+
+    const token = await tokenRes.json();
+    if (!tokenRes.ok) throw new Error(token.message);
+
+    await db.collection('ml_tokens').doc(businessId).set({
+      accessToken:  token.access_token,
+      refreshToken: token.refresh_token,
+      expiresAt:    Date.now() + token.expires_in * 1000,
+      mlUserId:     token.user_id,
+      connectedAt:  admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    // Marcar el negocio como conectado a ML
+    await db.collection('businesses').doc(businessId).update({
+      mlConnected: true,
+      mlUserId: token.user_id,
+    });
+
+    res.redirect('https://app.genesys.com.ar?ml=success');
+  } catch (e) {
+    console.error('ML callback error:', e);
+    res.redirect('https://app.genesys.com.ar?ml=error');
+  }
+});
+
+// ── 14. Publicar producto en ML ────────────────────────────────────────
+exports.mlPublicarProducto = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError('unauthenticated', 'No autenticado');
+
+  const { phoneId, categoryId, precio, condicion, descripcion } = request.data;
+  // condicion: 'new' | 'used'
+  // categoryId: categoría de ML (ej: MLA1055 para celulares)
+
+  if (!phoneId || !categoryId || !precio || !condicion) {
+    throw new HttpsError('invalid-argument', 'Faltan datos requeridos');
+  }
+
+  const userDoc = await db.collection('users').doc(uid).get();
+  if (!userDoc.exists) throw new HttpsError('not-found', 'Usuario no encontrado');
+  const businessId = userDoc.data().businessId;
+
+  // Obtener datos del producto
+  const phoneDoc = await db.collection('phones').doc(phoneId).get();
+  if (!phoneDoc.exists) throw new HttpsError('not-found', 'Producto no encontrado');
+  const phone = phoneDoc.data();
+
+  try {
+    const accessToken = await getMLToken(businessId);
+
+    // Construir título del producto
+    const titulo = [phone.model, phone.storage !== 'N/A' ? phone.storage : '', phone.color]
+      .filter(Boolean).join(' ').trim();
+
+    const body = {
+      title:        titulo,
+      category_id:  categoryId,
+      price:        Number(precio),
+      currency_id:  'ARS',
+      available_quantity: Number(phone.quantity) || 1,
+      buying_mode:  'buy_it_now',
+      condition:    condicion,
+      listing_type_id: 'gold_special',
+      description:  { plain_text: descripcion || `${titulo} en perfectas condiciones.` },
+      attributes: [
+        ...(phone.storage && phone.storage !== 'N/A' ? [{ id: 'STORAGE_CAPACITY', value_name: phone.storage }] : []),
+        ...(phone.color ? [{ id: 'COLOR', value_name: phone.color }] : []),
+      ],
+    };
+
+    // Agregar foto si tiene
+    if (phone.photo) {
+      body.pictures = [{ source: phone.photo }];
+    }
+
+    const mlRes = await fetch('https://api.mercadolibre.com/items', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    const mlData = await mlRes.json();
+    if (!mlRes.ok) throw new Error(mlData.message || JSON.stringify(mlData.cause));
+
+    // Guardar el ID de ML en el producto de Genesys
+    await db.collection('phones').doc(phoneId).update({
+      mlItemId:  mlData.id,
+      mlStatus:  mlData.status,
+      mlUrl:     mlData.permalink,
+      mlPublishedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    return { success: true, mlItemId: mlData.id, mlUrl: mlData.permalink };
+  } catch (e) {
+    throw new HttpsError('internal', e.message);
+  }
+});
+
+// ── 15. Webhook de ML (notificaciones de ventas y cambios) ────────────
+exports.mlWebhook = onRequest(async (req, res) => {
+  // ML hace GET para validar la URL
+  if (req.method === 'GET') { res.status(200).send('ok'); return; }
+  if (req.method !== 'POST') { res.status(405).send('Method not allowed'); return; }
+
+  const { topic, resource } = req.body;
+  res.status(200).send('ok'); // Responder rápido a ML
+
+  try {
+    if (topic === 'orders_v2' || topic === 'orders') {
+      // Obtener la orden de ML
+      const orderId = resource.replace('/orders/', '');
+
+      // Buscar el negocio que tiene este token
+      const tokensSnap = await db.collection('ml_tokens').get();
+
+      for (const tokenDoc of tokensSnap.docs) {
+        const businessId = tokenDoc.id;
+        try {
+          const accessToken = await getMLToken(businessId);
+
+          const orderRes = await fetch(`https://api.mercadolibre.com/orders/${orderId}`, {
+            headers: { 'Authorization': `Bearer ${accessToken}` },
+          });
+
+          if (!orderRes.ok) continue;
+          const order = await orderRes.json();
+
+          if (order.status !== 'paid') continue;
+
+          // Buscar el producto en Genesys por mlItemId
+          for (const item of order.order_items) {
+            const mlItemId = item.item.id;
+
+            const phonesSnap = await db.collection('phones')
+              .where('businessId', '==', businessId)
+              .where('mlItemId', '==', mlItemId)
+              .limit(1)
+              .get();
+
+            if (phonesSnap.empty) continue;
+
+            const phoneDoc = phonesSnap.docs[0];
+            const phone = phoneDoc.data();
+            const qty = Number(phone.quantity) || 1;
+
+            // Descontar stock
+            if (qty > 1) {
+              await phoneDoc.ref.update({ quantity: qty - 1, mlStatus: 'active' });
+            } else {
+              await phoneDoc.ref.update({ status: 'vendido', quantity: 0, mlStatus: 'closed' });
+            }
+
+            console.log(`ML venta procesada: ${mlItemId} para negocio ${businessId}`);
+          }
+        } catch (tokenErr) {
+          // Este negocio no tiene token válido, skip
+          continue;
+        }
+      }
+    }
+  } catch (e) {
+    console.error('ML webhook error:', e);
+  }
+});
+
+

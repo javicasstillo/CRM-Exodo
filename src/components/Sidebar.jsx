@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, Smartphone, Users, ShoppingCart, TrendingUp, LogOut, DollarSign, Search, X, Bell, Settings, Shield } from 'lucide-react';
+import { LayoutDashboard, Smartphone, Users, ShoppingCart, TrendingUp, LogOut, DollarSign, Search, X, Bell, Settings, Shield, ShoppingBag } from 'lucide-react';
 import { phonesApi } from '../api';
 import { useApp } from '../context/AppContext';
 
 const NAV = [
-  { id: 'dashboard', label: 'Panel',         icon: LayoutDashboard },
-  { id: 'phones',    label: 'Stock',          icon: Smartphone },
-  { id: 'buyers',    label: 'Compradores',    icon: Users },
-  { id: 'sales',     label: 'Ventas',         icon: ShoppingCart },
-  { id: 'expenses',  label: 'Gastos',         icon: DollarSign },
-  { id: 'stats',     label: 'Estadísticas',   icon: TrendingUp },
+  { id: 'dashboard',     label: 'Panel',          icon: LayoutDashboard },
+  { id: 'phones',        label: 'Stock',           icon: Smartphone },
+  { id: 'buyers',        label: 'Compradores',     icon: Users },
+  { id: 'sales',         label: 'Ventas',          icon: ShoppingCart },
+  { id: 'expenses',      label: 'Gastos',          icon: DollarSign },
+  { id: 'stats',         label: 'Estadísticas',    icon: TrendingUp },
+  { id: 'mercadolibre',  label: 'Mercado Libre',   icon: ShoppingBag },
 ];
 
 export default function Sidebar({ page, onNavigate, onLogout, className = '', business, profile, isSuperAdmin }) {
@@ -17,17 +18,13 @@ export default function Sidebar({ page, onNavigate, onLogout, className = '', bu
   const [searchQ, setSearchQ]       = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
 
-  // ── FIX bug 2: usar activeBranchId para re-suscribirse cuando cambia la sucursal ──
   const { activeBranchId, activeBusiness } = useApp();
 
   useEffect(() => {
-    // Cada vez que cambia la sucursal activa, re-suscribimos phonesApi
-    // que ya tiene el businessId correcto seteado por switchBranch
     const unsub = phonesApi.subscribe(setPhones);
     return unsub;
-  }, [activeBranchId]); // re-corre cuando cambia de sucursal
+  }, [activeBranchId]);
 
-  // Usar activeBusiness para mostrar el nombre/logo correcto en el sidebar
   const displayBusiness = activeBusiness || business;
 
   const lowStock   = phones.filter(p => p.status === 'disponible' && (Number(p.quantity) || 1) < 3);
@@ -119,6 +116,11 @@ export default function Sidebar({ page, onNavigate, onLogout, className = '', bu
               {id === 'phones' && alertCount > 0 && business?.plan !== 'emprendedor' && (
                 <span style={{ marginLeft: 'auto', background: '#ef4444', color: '#fff', fontSize: 10, fontWeight: 700, borderRadius: 20, padding: '1px 6px', minWidth: 18, textAlign: 'center' }}>
                   {alertCount}
+                </span>
+              )}
+              {id === 'mercadolibre' && business?.mlConnected && (
+                <span style={{ marginLeft: 'auto', background: '#fff200', color: '#333', fontSize: 9, fontWeight: 700, borderRadius: 20, padding: '1px 6px' }}>
+                  ON
                 </span>
               )}
             </button>
