@@ -700,31 +700,56 @@ exports.mlPublicarProducto = onCall(async (request) => {
   try {
     const accessToken = await getMLToken(businessId);
 
+    // Subir foto a imgbb si el producto tiene foto en base64
+let mlPictures = [];
+if (phone.photo && phone.photo.startsWith('data:image')) {
+  try {
+    const base64Data = phone.photo.split(',')[1];
+    const imgbbRes = await fetch(`https://api.imgbb.com/1/upload?key=TU_API_KEY_IMGBB`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ image: base64Data }),
+    });
+    const imgbbData = await imgbbRes.json();
+    if (imgbbData.success) {
+      mlPictures = [{ source: imgbbData.data.url }];
+    }
+  } catch (e) {
+    console.error('Error subiendo foto a imgbb:', e);
+  }
+}
+
     // Construir título del producto
     const titulo = phone.model
   .replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s]/g, '')
   .trim()
   .slice(0, 60);
 
-    const body = {
-  family_name:  titulo,
-  category_id:  categoryId,
-  price:        Number(precio),
-  currency_id:  'ARS',
+const body = {
+  family_name: titulo,
+  category_id: categoryId,
+  price: Number(precio),
+  currency_id: 'ARS',
   available_quantity: Number(phone.quantity) || 1,
-  buying_mode:  'buy_it_now',
-  condition:    condicion,
-  listing_type_id: 'free',
-  description:  { plain_text: descripcion || `${titulo} en perfectas condiciones.` },
-  attributes: [
+  buying_mode: 'buy_it_now',
+  condition: condicion,
+  listing_type_id: 'bronze',
+  description: { plain_text: descripcion || `${titulo} en perfectas condiciones.` },
+  sale_terms: [
+    { id: 'WARRANTY_TYPE', value_name: 'Garantía del vendedor' },
+    { id: 'WARRANTY_TIME', value_name: '90 días' },
+  ],
+ attributes: [
   { id: 'BRAND', value_name: phone.model.includes('iPhone') ? 'Apple' : phone.model.split(' ')[0] },
   { id: 'MODEL', value_name: phone.model },
   { id: 'FAMILY_NAME', value_name: phone.model },
-  { id: 'IS_DUAL_SIM', value_id: '242084' }, // No (valor fijo, la mayoría de iPhones no son dual sim)
-  { id: 'CARRIER', value_id: '298335' }, // Liberado
+  { id: 'IS_DUAL_SIM', value_id: '242084' },
+  { id: 'CARRIER', value_id: '298335' },
   { id: 'COLOR', value_name: phone.color || 'Negro' },
-  ...(phone.storage && phone.storage !== 'N/A' ? [{ id: 'INTERNAL_MEMORY', value_name: phone.storage.replace('GB',''), unit: 'GB' }] : []),
+  { id: 'GTIN', value_name: '0194252671085' },
+  ...(phone.storage && phone.storage !== 'N/A' ? [{ id: 'INTERNAL_MEMORY', value_name: phone.storage.replace('GB', ' GB').trim() }] : []),
 ],
+...(mlPictures.length > 0 ? { pictures: mlPictures } : {}),
 };
 
     console.log('ML body:', JSON.stringify(body));
