@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { LayoutDashboard, Smartphone, Users, ShoppingCart, TrendingUp, LogOut, DollarSign, Search, X, Bell, Settings, Shield, ShoppingBag } from 'lucide-react';
 import { phonesApi } from '../api';
 import { useApp } from '../context/AppContext';
+import logoMeli from '../assets/logoMeli.webp';
 
 export default function Sidebar({ page, onNavigate, onLogout, className = '', business, profile, isSuperAdmin }) {
   const [phones, setPhones]         = useState([]);
@@ -113,7 +114,7 @@ export default function Sidebar({ page, onNavigate, onLogout, className = '', bu
               className={`nav-item ${page === id ? 'active' : ''}`}
               onClick={() => onNavigate(id)}>
               {id === 'mercadolibre'
-                ? <img src="/src/assets/logoMeli.webp" style={{ width: 16, height: 16, objectFit: 'contain' }} alt="ML" />
+                ? <img src={logoMeli} style={{ width: 16, height: 16, objectFit: 'contain' }} alt="ML" />
                 : <Icon size={16} />
               }
               {label}
