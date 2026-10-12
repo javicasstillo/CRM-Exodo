@@ -44,8 +44,8 @@ export default function MercadoLibre() {
     <>
       <div className="page-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ width: 40, height: 40, borderRadius: 10, background: '#fff200', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>
-            🛒
+          <div style={{ width: 40, height: 40, borderRadius: 10, background: '#fff200', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+            <img src="/src/assets/logoMeli.webp" style={{ width: 32, height: 32, objectFit: 'contain' }} alt="Mercado Libre" />
           </div>
           <div>
             <h2>Mercado Libre</h2>

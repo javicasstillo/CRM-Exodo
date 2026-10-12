@@ -71,7 +71,7 @@ function Skeleton() {
 }
 
 function AppShell({ user }) {
-  const { profile, business, loading: appLoading, isNewBusiness, setIsNewBusiness, branchVersion } = useApp();
+  const { profile, business, loading: appLoading, isNewBusiness, setIsNewBusiness, branchVersion, refreshBusiness } = useApp();
   const toast = useToast();
   const [page, setPage]               = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -102,9 +102,11 @@ function AppShell({ user }) {
     const params = new URLSearchParams(window.location.search);
     const ml = params.get('ml');
     if (ml === 'success') {
-      toast('¡Cuenta de Mercado Libre conectada!', 'success');
-      setPage('mercadolibre');
       window.history.replaceState({}, '', window.location.pathname);
+      refreshBusiness().then(() => {
+        toast('¡Cuenta de Mercado Libre conectada!', 'success');
+        setPage('mercadolibre');
+      });
     } else if (ml === 'error') {
       toast('Error al conectar con Mercado Libre', 'error');
       window.history.replaceState({}, '', window.location.pathname);

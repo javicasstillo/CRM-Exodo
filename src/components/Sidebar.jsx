@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, Smartphone, Users, ShoppingCart, TrendingUp, LogOut, DollarSign, Search, X, Bell, Settings, Shield, ShoppingBag } from 'lucide-react';
+import { LayoutDashboard, Smartphone, Users, ShoppingCart, TrendingUp, LogOut, DollarSign, Search, X, Bell, Settings, Shield } from 'lucide-react';
 import { phonesApi } from '../api';
 import { useApp } from '../context/AppContext';
+
 
 const NAV = [
   { id: 'dashboard',     label: 'Panel',          icon: LayoutDashboard },
@@ -10,7 +11,7 @@ const NAV = [
   { id: 'sales',         label: 'Ventas',          icon: ShoppingCart },
   { id: 'expenses',      label: 'Gastos',          icon: DollarSign },
   { id: 'stats',         label: 'Estadísticas',    icon: TrendingUp },
-  { id: 'mercadolibre',  label: 'Mercado Libre',   icon: ShoppingBag },
+  ...(business?.plan === 'pyme' || business?.plan === 'empresa' ? [{ id: 'mercadolibre', label: 'Mercado Libre', icon: ShoppingBag }] : []),
 ];
 
 export default function Sidebar({ page, onNavigate, onLogout, className = '', business, profile, isSuperAdmin }) {
@@ -18,13 +19,17 @@ export default function Sidebar({ page, onNavigate, onLogout, className = '', bu
   const [searchQ, setSearchQ]       = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
 
+  // ── FIX bug 2: usar activeBranchId para re-suscribirse cuando cambia la sucursal ──
   const { activeBranchId, activeBusiness } = useApp();
 
   useEffect(() => {
+    // Cada vez que cambia la sucursal activa, re-suscribimos phonesApi
+    // que ya tiene el businessId correcto seteado por switchBranch
     const unsub = phonesApi.subscribe(setPhones);
     return unsub;
-  }, [activeBranchId]);
+  }, [activeBranchId]); // re-corre cuando cambia de sucursal
 
+  // Usar activeBusiness para mostrar el nombre/logo correcto en el sidebar
   const displayBusiness = activeBusiness || business;
 
   const lowStock   = phones.filter(p => p.status === 'disponible' && (Number(p.quantity) || 1) < 3);
@@ -103,57 +108,60 @@ export default function Sidebar({ page, onNavigate, onLogout, className = '', bu
         </div>
 
         {/* Nav */}
-        <nav className="sidebar-nav">
-          <div className="nav-section-label">Menú</div>
-          {NAV.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              id={`nav-item-${id}`}
-              className={`nav-item ${page === id ? 'active' : ''}`}
-              onClick={() => onNavigate(id)}>
-              <Icon size={16} />
-              {label}
-              {id === 'phones' && alertCount > 0 && business?.plan !== 'emprendedor' && (
-                <span style={{ marginLeft: 'auto', background: '#ef4444', color: '#fff', fontSize: 10, fontWeight: 700, borderRadius: 20, padding: '1px 6px', minWidth: 18, textAlign: 'center' }}>
-                  {alertCount}
-                </span>
-              )}
-              {id === 'mercadolibre' && business?.mlConnected && (
-                <span style={{ marginLeft: 'auto', background: '#fff200', color: '#333', fontSize: 9, fontWeight: 700, borderRadius: 20, padding: '1px 6px' }}>
-                  ON
-                </span>
-              )}
-            </button>
-          ))}
+        <nav className="sidebar-nav">   
+  <div className="nav-section-label">Menú</div>
+  {NAV.map(({ id, label, icon: Icon }) => (
+    <button
+      key={id}
+      id={`nav-item-${id}`}
+      className={`nav-item ${page === id ? 'active' : ''}`}
+      onClick={() => onNavigate(id)}>
+      {id === 'mercadolibre'
+        ? <img src="/src/assets/logoMeli.webp" style={{ width: 16, height: 16, objectFit: 'contain' }} alt="ML" />
+        : <Icon size={16} />
+      }
+      {label}
+      {id === 'phones' && alertCount > 0 && business?.plan !== 'emprendedor' && (
+        <span style={{ marginLeft: 'auto', background: '#ef4444', color: '#fff', fontSize: 10, fontWeight: 700, borderRadius: 20, padding: '1px 6px', minWidth: 18, textAlign: 'center' }}>
+          {alertCount}
+        </span>
+      )}
+      {id === 'mercadolibre' && business?.mlConnected && (
+        <span style={{ marginLeft: 'auto', background: '#fff200', color: '#333', fontSize: 9, fontWeight: 700, borderRadius: 20, padding: '1px 6px' }}>
+          ON
+        </span>
+      )}
+    </button>
+  ))}
 
-          {isAdmin && !isSuperAdmin && (
-            <>
-              <div className="nav-section-label" style={{ marginTop: 8 }}>Admin</div>
-              <button
-                id="nav-item-settings"
-                className={`nav-item ${page === 'settings' ? 'active' : ''}`}
-                onClick={() => onNavigate('settings')}>
-                <Settings size={16} /> Configuración
-              </button>
-            </>
-          )}
+  {isAdmin && !isSuperAdmin && (
+    <>
+      <div className="nav-section-label" style={{ marginTop: 8 }}>Admin</div>
+      <button
+        id="nav-item-settings"
+        className={`nav-item ${page === 'settings' ? 'active' : ''}`}
+        onClick={() => onNavigate('settings')}>
+        <Settings size={16} /> Configuración
+      </button>
+    </>
+  )}
 
-          {isSuperAdmin && (
-            <>
-              <div className="nav-section-label" style={{ marginTop: 8 }}>Genesys</div>
-              <button
-                id="nav-item-settings"
-                className={`nav-item ${page === 'settings' ? 'active' : ''}`}
-                onClick={() => onNavigate('settings')}>
-                <Settings size={16} /> Configuración
-              </button>
-              <button
-                className={`nav-item ${page === 'admin' ? 'active' : ''}`}
-                onClick={() => onNavigate('admin')}>
-                <Shield size={16} /> Panel Admin
-              </button>
-            </>
-          )}
+  {isSuperAdmin && (
+    <>
+      <div className="nav-section-label" style={{ marginTop: 8 }}>Genesys</div>
+      <button
+        id="nav-item-settings"
+        className={`nav-item ${page === 'settings' ? 'active' : ''}`}
+        onClick={() => onNavigate('settings')}>
+        <Settings size={16} /> Configuración
+      </button>
+      <button
+        className={`nav-item ${page === 'admin' ? 'active' : ''}`}
+        onClick={() => onNavigate('admin')}>
+        <Shield size={16} /> Panel Admin
+      </button>
+    </>
+  )}
         </nav>
 
         {alertCount > 0 && business?.plan !== 'emprendedor' && (
