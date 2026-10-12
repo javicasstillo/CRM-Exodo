@@ -3,6 +3,7 @@ const { onSchedule } = require("firebase-functions/v2/scheduler");
 const admin = require("firebase-admin");
 const { MercadoPagoConfig, PreApproval, PreApprovalPlan } = require("mercadopago");
 const { Resend } = require('resend');
+const { getGTIN } = require('./gtin_table');
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -754,7 +755,7 @@ const body = {
       { id: 'FAMILY_NAME', value_name: phone.model },
       { id: 'IS_DUAL_SIM', value_id: '242084' },
       { id: 'CARRIER', value_id: '298335' },
-      { id: 'GTIN', value_name: '0194252671085' },
+      ...(getGTIN(phone.model) ? [{ id: 'GTIN', value_name: getGTIN(phone.model) }] : [{ id: 'EMPTY_GTIN_REASON', value_id: '17055161' }]),
     ] : []),
     { id: 'COLOR', value_name: phone.color || 'Negro' },
     ...(phone.storage && phone.storage !== 'N/A' ? [{ id: 'INTERNAL_MEMORY', value_name: phone.storage.replace('GB', ' GB').trim() }] : []),
