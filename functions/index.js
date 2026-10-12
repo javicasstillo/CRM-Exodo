@@ -701,18 +701,22 @@ exports.mlPublicarProducto = onCall(async (request) => {
     const accessToken = await getMLToken(businessId);
 
     // Subir foto a imgbb si el producto tiene foto en base64
+// Subir foto a imgbb si el producto tiene foto en base64
 let mlPictures = [];
 if (phone.photo && phone.photo.startsWith('data:image')) {
   try {
     const base64Data = phone.photo.split(',')[1];
+    const formData = new FormData();
+    formData.append('image', base64Data);
     const imgbbRes = await fetch(`https://api.imgbb.com/1/upload?key=${process.env.IMGBB_API_KEY}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ image: base64Data }),
+      body: formData,
     });
     const imgbbData = await imgbbRes.json();
     if (imgbbData.success) {
       mlPictures = [{ source: imgbbData.data.url }];
+    } else {
+      console.error('imgbb error:', JSON.stringify(imgbbData));
     }
   } catch (e) {
     console.error('Error subiendo foto a imgbb:', e);
@@ -727,8 +731,10 @@ console.log('mlPictures:', JSON.stringify(mlPictures));
   .trim()
   .slice(0, 60);
 
+const esCelular = categoryId === 'MLA1055';
+
 const body = {
-  family_name: titulo,
+  ...(esCelular ? { family_name: titulo } : { title: titulo }),
   category_id: categoryId,
   price: Number(precio),
   currency_id: 'ARS',
@@ -741,17 +747,19 @@ const body = {
     { id: 'WARRANTY_TYPE', value_name: 'Garantía del vendedor' },
     { id: 'WARRANTY_TIME', value_name: '90 días' },
   ],
- attributes: [
-  { id: 'BRAND', value_name: phone.model.includes('iPhone') ? 'Apple' : phone.model.split(' ')[0] },
-  { id: 'MODEL', value_name: phone.model },
-  { id: 'FAMILY_NAME', value_name: phone.model },
-  { id: 'IS_DUAL_SIM', value_id: '242084' },
-  { id: 'CARRIER', value_id: '298335' },
-  { id: 'COLOR', value_name: phone.color || 'Negro' },
-  { id: 'GTIN', value_name: '0194252671085' },
-  ...(phone.storage && phone.storage !== 'N/A' ? [{ id: 'INTERNAL_MEMORY', value_name: phone.storage.replace('GB', ' GB').trim() }] : []),
-],
-...(mlPictures.length > 0 ? { pictures: mlPictures } : {}),
+  attributes: [
+    { id: 'BRAND', value_name: phone.model.includes('iPhone') || phone.model.includes('AirPods') || phone.model.includes('Apple') ? 'Apple' : phone.model.split(' ')[0] },
+    { id: 'MODEL', value_name: phone.model },
+    ...(esCelular ? [
+      { id: 'FAMILY_NAME', value_name: phone.model },
+      { id: 'IS_DUAL_SIM', value_id: '242084' },
+      { id: 'CARRIER', value_id: '298335' },
+      { id: 'GTIN', value_name: '0194252671085' },
+    ] : []),
+    { id: 'COLOR', value_name: phone.color || 'Negro' },
+    ...(phone.storage && phone.storage !== 'N/A' ? [{ id: 'INTERNAL_MEMORY', value_name: phone.storage.replace('GB', ' GB').trim() }] : []),
+  ],
+  ...(mlPictures.length > 0 ? { pictures: mlPictures } : {}),
 };
 
     console.log('ML body:', JSON.stringify(body));
