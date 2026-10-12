@@ -712,9 +712,12 @@ exports.mlPublicarProducto = onCall(async (request) => {
       available_quantity: Number(phone.quantity) || 1,
       buying_mode:  'buy_it_now',
       condition:    condicion,
-      listing_type_id: 'gold_special',
+      listing_type_id: 'free',
       description:  { plain_text: descripcion || `${titulo} en perfectas condiciones.` },
       attributes: [
+        { id: 'BRAND', value_name: phone.model.split(' ')[0] },
+  { id: 'MODEL', value_name: phone.model },
+  { id: 'FAMILY_NAME', value_name: phone.model },
         ...(phone.storage && phone.storage !== 'N/A' ? [{ id: 'STORAGE_CAPACITY', value_name: phone.storage }] : []),
         ...(phone.color ? [{ id: 'COLOR', value_name: phone.color }] : []),
       ],
@@ -735,7 +738,10 @@ exports.mlPublicarProducto = onCall(async (request) => {
     });
 
     const mlData = await mlRes.json();
-    if (!mlRes.ok) throw new Error(mlData.message || JSON.stringify(mlData.cause));
+    if (!mlRes.ok) {
+  console.error('ML API error:', JSON.stringify(mlData));
+  throw new Error(JSON.stringify(mlData));
+}
 
     // Guardar el ID de ML en el producto de Genesys
     await db.collection('phones').doc(phoneId).update({
