@@ -8,16 +8,14 @@ import { useToast } from '../context/ToastContext';
 const ML_CATEGORIES = [
   { id: 'MLA1055',  label: 'Celulares y Smartphones' },
   { id: 'MLA1714',  label: 'Tablets y Accesorios' },
-  { id: 'MLA1648',  label: 'Computación — Laptops y Accesorios' },
+  { id: 'MLA1648',  label: 'Computación — Laptops' },
   { id: 'MLA1649',  label: 'Computación — PC de Escritorio' },
   { id: 'MLA1700',  label: 'Computación — Monitores' },
-  { id: 'MLA3697',  label: 'Electrónica — Auriculares' },
-  { id: 'MLA3584',  label: 'Electrónica — Parlantes' },
-  { id: 'MLA412349', label: 'Accesorios para Celulares — Fundas' },
-  { id: 'MLA412350', label: 'Accesorios para Celulares — Vidrios Templados' },
-  { id: 'MLA412351', label: 'Accesorios para Celulares — Cargadores' },
-  { id: 'MLA412352', label: 'Accesorios para Celulares — Cables' },
-  { id: 'MLA1678',  label: 'Smartwatches y Accesorios' },
+  { id: 'MLA3697',  label: 'Auriculares' },
+  { id: 'MLA3584',  label: 'Parlantes' },
+  { id: 'MLA3690',  label: 'Accesorios para Celulares' },
+  { id: 'MLA1144',  label: 'Cargadores y Cables' },
+  { id: 'MLA1678',  label: 'Smartwatches' },
   { id: 'MLA1051',  label: 'Electrónica — Otro' },
 ];
 
