@@ -732,10 +732,8 @@ console.log('mlPictures:', JSON.stringify(mlPictures));
   .trim()
   .slice(0, 60);
 
-const esCelular = categoryId === 'MLA1055';
-
 const body = {
-  ...(esCelular ? { family_name: titulo } : { title: titulo }),
+  family_name: titulo,
   category_id: categoryId,
   price: Number(precio),
   currency_id: 'ARS',
@@ -749,17 +747,17 @@ const body = {
     { id: 'WARRANTY_TIME', value_name: '90 días' },
   ],
   attributes: [
-    { id: 'BRAND', value_name: phone.model.includes('iPhone') || phone.model.includes('AirPods') || phone.model.includes('Apple') ? 'Apple' : phone.model.split(' ')[0] },
-    { id: 'MODEL', value_name: phone.model },
-    ...(esCelular ? [
-      { id: 'FAMILY_NAME', value_name: phone.model },
-      { id: 'IS_DUAL_SIM', value_id: '242084' },
-      { id: 'CARRIER', value_id: '298335' },
-      ...(getGTIN(phone.model) ? [{ id: 'GTIN', value_name: getGTIN(phone.model) }] : [{ id: 'EMPTY_GTIN_REASON', value_id: '17055161' }]),
-    ] : []),
-    { id: 'COLOR', value_name: phone.color || 'Negro' },
-    ...(phone.storage && phone.storage !== 'N/A' ? [{ id: 'INTERNAL_MEMORY', value_name: phone.storage.replace('GB', ' GB').trim() }] : []),
-  ],
+  { id: 'BRAND', value_name: phone.model.includes('iPhone') || phone.model.includes('AirPods') || phone.model.includes('Apple') ? 'Apple' : phone.model.split(' ')[0] },
+  { id: 'MODEL', value_name: phone.model },
+  ...(categoryId === 'MLA1055' ? [
+    { id: 'FAMILY_NAME', value_name: phone.model },
+    { id: 'IS_DUAL_SIM', value_id: '242084' },
+    { id: 'CARRIER', value_id: '298335' },
+    ...(getGTIN(phone.model) ? [{ id: 'GTIN', value_name: getGTIN(phone.model) }] : [{ id: 'EMPTY_GTIN_REASON', value_id: '17055161' }]),
+  ] : []),
+  { id: 'COLOR', value_name: phone.color || 'Negro' },
+  ...(phone.storage && phone.storage !== 'N/A' ? [{ id: 'INTERNAL_MEMORY', value_name: phone.storage.replace('GB', ' GB').trim() }] : []),
+],
   ...(mlPictures.length > 0 ? { pictures: mlPictures } : {}),
 };
 
