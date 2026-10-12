@@ -701,33 +701,33 @@ exports.mlPublicarProducto = onCall(async (request) => {
     const accessToken = await getMLToken(businessId);
 
     // Construir título del producto
-    const titulo = [phone.model, phone.storage !== 'N/A' ? phone.storage : '', phone.color]
-      .filter(Boolean).join(' ').trim();
+    const titulo = phone.model
+  .replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s]/g, '')
+  .trim()
+  .slice(0, 60);
 
     const body = {
-      title:        titulo,
-      category_id:  categoryId,
-      price:        Number(precio),
-      currency_id:  'ARS',
-      available_quantity: Number(phone.quantity) || 1,
-      buying_mode:  'buy_it_now',
-      condition:    condicion,
-      listing_type_id: 'free',
-      description:  { plain_text: descripcion || `${titulo} en perfectas condiciones.` },
-      attributes: [
-        { id: 'BRAND', value_name: phone.model.split(' ')[0] },
+  family_name:  titulo,
+  category_id:  categoryId,
+  price:        Number(precio),
+  currency_id:  'ARS',
+  available_quantity: Number(phone.quantity) || 1,
+  buying_mode:  'buy_it_now',
+  condition:    condicion,
+  listing_type_id: 'free',
+  description:  { plain_text: descripcion || `${titulo} en perfectas condiciones.` },
+  attributes: [
+  { id: 'BRAND', value_name: phone.model.includes('iPhone') ? 'Apple' : phone.model.split(' ')[0] },
   { id: 'MODEL', value_name: phone.model },
   { id: 'FAMILY_NAME', value_name: phone.model },
-        ...(phone.storage && phone.storage !== 'N/A' ? [{ id: 'STORAGE_CAPACITY', value_name: phone.storage }] : []),
-        ...(phone.color ? [{ id: 'COLOR', value_name: phone.color }] : []),
-      ],
-    };
+  { id: 'IS_DUAL_SIM', value_id: '242084' }, // No (valor fijo, la mayoría de iPhones no son dual sim)
+  { id: 'CARRIER', value_id: '298335' }, // Liberado
+  { id: 'COLOR', value_name: phone.color || 'Negro' },
+  ...(phone.storage && phone.storage !== 'N/A' ? [{ id: 'INTERNAL_MEMORY', value_name: phone.storage.replace('GB',''), unit: 'GB' }] : []),
+],
+};
 
-    // Agregar foto si tiene
-    if (phone.photo) {
-      body.pictures = [{ source: phone.photo }];
-    }
-
+    console.log('ML body:', JSON.stringify(body));
     const mlRes = await fetch('https://api.mercadolibre.com/items', {
       method: 'POST',
       headers: {
