@@ -705,7 +705,7 @@ let mlPictures = [];
 if (phone.photo && phone.photo.startsWith('data:image')) {
   try {
     const base64Data = phone.photo.split(',')[1];
-    const imgbbRes = await fetch(`https://api.imgbb.com/1/upload?key=TU_API_KEY_IMGBB`, {
+    const imgbbRes = await fetch(`https://api.imgbb.com/1/upload?key=${process.env.IMGBB_API_KEY}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({ image: base64Data }),
@@ -718,6 +718,8 @@ if (phone.photo && phone.photo.startsWith('data:image')) {
     console.error('Error subiendo foto a imgbb:', e);
   }
 }
+
+console.log('mlPictures:', JSON.stringify(mlPictures));
 
     // Construir título del producto
     const titulo = phone.model
