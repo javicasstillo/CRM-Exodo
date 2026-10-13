@@ -14,7 +14,7 @@ const ML_CATEGORIES = [
   { id: 'MLA3697',  label: 'Auriculares' },
   { id: 'MLA3584',  label: 'Parlantes' },
   { id: 'MLA3690',  label: 'Accesorios para Celulares' },
-  { id: 'MLA1144',  label: 'Cargadores y Cables' },
+  { id: 'MLA412825', label: 'Cargadores para Celulares' },
   { id: 'MLA1678',  label: 'Smartwatches' },
   { id: 'MLA1051',  label: 'Electrónica — Otro' },
 ];
