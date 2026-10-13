@@ -6,17 +6,19 @@ import { useToast } from '../context/ToastContext';
 
 // Categorías principales de ML Argentina para tecnología
 const ML_CATEGORIES = [
-  { id: 'MLA1055',  label: 'Celulares y Smartphones' },
-  { id: 'MLA1714',  label: 'Tablets y Accesorios' },
-  { id: 'MLA1648',  label: 'Computación — Laptops' },
-  { id: 'MLA1649',  label: 'Computación — PC de Escritorio' },
-  { id: 'MLA1700',  label: 'Computación — Monitores' },
-  { id: 'MLA3697',  label: 'Auriculares' },
-  { id: 'MLA3584',  label: 'Parlantes' },
-  { id: 'MLA3690',  label: 'Accesorios para Celulares' },
+  { id: 'MLA1055',   label: 'Celulares y Smartphones' },
+  { id: 'MLA1714',   label: 'Tablets y Accesorios' },
+  { id: 'MLA1648',   label: 'Computación — Laptops' },
+  { id: 'MLA1649',   label: 'Computación — PC de Escritorio' },
+  { id: 'MLA1700',   label: 'Computación — Monitores' },
+  { id: 'MLA3697',   label: 'Auriculares' },
+  { id: 'MLA3584',   label: 'Parlantes' },
   { id: 'MLA412825', label: 'Cargadores para Celulares' },
-  { id: 'MLA1678',  label: 'Smartwatches' },
-  { id: 'MLA1051',  label: 'Electrónica — Otro' },
+  { id: 'MLA412349', label: 'Fundas para Celulares' },
+  { id: 'MLA412350', label: 'Vidrios Templados' },
+  { id: 'MLA1678',   label: 'Smartwatches' },
+  { id: 'MLA3697',   label: 'Auriculares Inalámbricos' },
+  { id: 'MLA1051',   label: 'Electrónica — Otro' },
 ];
 
 const CONDITIONS_ML = [
