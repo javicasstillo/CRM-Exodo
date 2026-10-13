@@ -110,6 +110,15 @@ export default function PublicarMLModal({ phone, onClose }) {
                   value={form.descripcion} onChange={e => set('descripcion', e.target.value)} />
               </div>
 
+              <div className="form-group">
+  <label className="form-label">GTIN / Código de barras <span style={{color:'var(--text3)', fontWeight:400}}>(opcional)</span></label>
+  <input className="form-input" placeholder="Ej: 8806095076407 — está en la caja del producto"
+    value={form.gtin || ''} onChange={e => set('gtin', e.target.value)} />
+  <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4 }}>
+    Si no tenés la caja, dejá vacío y Genesys usará "sin código registrado"
+  </div>
+</div>
+
               <div style={{ background: 'var(--bg2)', borderRadius: 10, padding: '12px 14px', fontSize: 12, color: 'var(--text3)', lineHeight: 1.6 }}>
                 💡 La publicación se creará como <strong>Compra inmediata</strong> en ML. Podés editarla después desde tu cuenta de ML.
               </div>
