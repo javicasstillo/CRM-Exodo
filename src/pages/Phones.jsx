@@ -281,16 +281,17 @@ function Modal({ phone, onClose, onSave, saving }) {
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   const handleCategory = (cat) => {
-    const models = CATEGORIES[cat];
-    const firstModel = models?.length > 0 ? models[0] : '';
-    setForm(f => ({
-      ...f,
-      category: cat,
-      model: firstModel,
-      customModel: '',
-      quantity: IS_UNIQUE.includes(cat) ? 1 : (f.quantity || 1),
-    }));
-  };
+  const models = CATEGORIES[cat];
+  const firstModel = models?.length > 0 ? models[0] : '';
+  setForm(f => ({
+    ...f,
+    category: cat,
+    model: firstModel,
+    customModel: '',
+    storage: NEEDS_STORAGE.includes(cat) ? (f.storage || '128GB') : 'N/A',
+    quantity: IS_UNIQUE.includes(cat) ? 1 : (f.quantity || 1),
+  }));
+};
 
   const isOtro = form.category === 'Otro';
   const hasModels = CATEGORIES[form.category]?.length > 0;
