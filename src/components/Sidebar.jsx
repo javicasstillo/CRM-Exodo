@@ -29,9 +29,7 @@ export default function Sidebar({ page, onNavigate, onLogout, className = '', bu
     { id: 'sales',      label: 'Ventas',         icon: ShoppingCart },
     { id: 'expenses',   label: 'Gastos',         icon: DollarSign },
     { id: 'stats',      label: 'Estadísticas',   icon: TrendingUp },
-    ...(business?.plan === 'pyme' || business?.plan === 'empresa'
-  ? [{ id: 'mercadolibre', label: 'Mercado Libre', icon: ShoppingBag }]
-  : []),
+    { id: 'mercadolibre', label: 'Mercado Libre', icon: ShoppingBag },
   ];
 
   const searchResults = searchQ.length > 1
@@ -109,15 +107,21 @@ export default function Sidebar({ page, onNavigate, onLogout, className = '', bu
           <div className="nav-section-label">Menú</div>
           {NAV.map(({ id, label, icon: Icon }) => (
             <button
-              key={id}
-              id={`nav-item-${id}`}
-              className={`nav-item ${page === id ? 'active' : ''}`}
-              onClick={() => onNavigate(id)}>
+  key={id}
+  id={`nav-item-${id}`}
+  className={`nav-item ${page === id ? 'active' : ''}`}
+  onClick={() => id === 'mercadolibre' && business?.plan === 'emprendedor' ? null : onNavigate(id)}
+  style={id === 'mercadolibre' && business?.plan === 'emprendedor' ? { opacity: 0.5, cursor: 'not-allowed' } : {}}>
               {id === 'mercadolibre'
-                ? <img src={logoMeli} style={{ width: 16, height: 16, objectFit: 'contain' }} alt="ML" />
-                : <Icon size={16} />
-              }
-              {label}
+                  ? <img src={logoMeli} style={{ width: 16, height: 16, objectFit: 'contain' }} alt="ML" />
+                  : <Icon size={16} />
+                }
+                {label}
+                {id === 'mercadolibre' && business?.plan === 'emprendedor' && (
+                  <span style={{ marginLeft: 'auto', background: '#d97706', color: '#fff', fontSize: 9, fontWeight: 700, borderRadius: 20, padding: '1px 6px' }}>
+                    Pyme+
+                  </span>
+                )}
               {id === 'phones' && alertCount > 0 && business?.plan !== 'emprendedor' && (
                 <span style={{ marginLeft: 'auto', background: '#ef4444', color: '#fff', fontSize: 10, fontWeight: 700, borderRadius: 20, padding: '1px 6px', minWidth: 18, textAlign: 'center' }}>
                   {alertCount}
