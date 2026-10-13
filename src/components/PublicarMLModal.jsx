@@ -1,25 +1,8 @@
 // src/components/PublicarMLModal.jsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { getFunctions, httpsCallable } from 'firebase/functions';
-import { X, ExternalLink } from 'lucide-react';
+import { X, ExternalLink, RefreshCw } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
-
-// Categorías principales de ML Argentina para tecnología
-const ML_CATEGORIES = [
-  { id: 'MLA1055',   label: 'Celulares y Smartphones' },
-  { id: 'MLA1714',   label: 'Tablets y Accesorios' },
-  { id: 'MLA1648',   label: 'Computación — Laptops' },
-  { id: 'MLA1649',   label: 'Computación — PC de Escritorio' },
-  { id: 'MLA1700',   label: 'Computación — Monitores' },
-  { id: 'MLA3697',   label: 'Auriculares' },
-  { id: 'MLA3584',   label: 'Parlantes' },
-  { id: 'MLA412825', label: 'Cargadores para Celulares' },
-  { id: 'MLA412349', label: 'Fundas para Celulares' },
-  { id: 'MLA412350', label: 'Vidrios Templados' },
-  { id: 'MLA1678',   label: 'Smartwatches' },
-  { id: 'MLA3697',   label: 'Auriculares Inalámbricos' },
-  { id: 'MLA1051',   label: 'Electrónica — Otro' },
-];
 
 const CONDITIONS_ML = [
   { value: 'new',  label: 'Nuevo' },
@@ -29,18 +12,46 @@ const CONDITIONS_ML = [
 export default function PublicarMLModal({ phone, onClose }) {
   const toast = useToast();
   const [form, setForm] = useState({
-    categoryId:  ML_CATEGORIES[0].id,
+    categoryId:  '',
+    categoryNombre: '',
     precio:      phone?.salePrice || '',
     condicion:   phone?.condition === 'Nuevo' ? 'new' : 'used',
     descripcion: '',
     gtin:        '',
   });
+  const [categoriasML, setCategoriasML] = useState([]);
+  const [loadingCat, setLoadingCat] = useState(true);
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState(null);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   const titulo = [phone?.model, phone?.storage !== 'N/A' ? phone?.storage : '', phone?.color]
     .filter(Boolean).join(' ').trim();
+
+  // Predecir categoría al abrir el modal
+  useEffect(() => {
+    const predecir = async () => {
+      setLoadingCat(true);
+      try {
+        const functions = getFunctions(undefined, 'us-central1');
+        const mlPredecir = httpsCallable(functions, 'mlPredecirCategoria');
+        const res = await mlPredecir({ titulo });
+        if (res.data?.categorias?.length > 0) {
+          setCategoriasML(res.data.categorias);
+          setForm(f => ({
+            ...f,
+            categoryId: res.data.categorias[0].id,
+            categoryNombre: res.data.categorias[0].nombre,
+          }));
+        }
+      } catch (e) {
+        console.error('Error prediciendo categoría:', e);
+      } finally {
+        setLoadingCat(false);
+      }
+    };
+    predecir();
+  }, []);
 
   const handlePublicar = async () => {
     if (!form.categoryId || !form.precio) {
@@ -51,13 +62,13 @@ export default function PublicarMLModal({ phone, onClose }) {
       const functions = getFunctions(undefined, 'us-central1');
       const mlPublicar = httpsCallable(functions, 'mlPublicarProducto');
       const res = await mlPublicar({
-  phoneId:     phone.id,
-  categoryId:  form.categoryId,
-  precio:      Number(form.precio),
-  condicion:   form.condicion,
-  descripcion: form.descripcion,
-  gtin:        form.gtin || '',
-});
+        phoneId:     phone.id,
+        categoryId:  form.categoryId,
+        precio:      Number(form.precio),
+        condicion:   form.condicion,
+        descripcion: form.descripcion,
+        gtin:        form.gtin || '',
+      });
       setResult(res.data);
       toast('¡Producto publicado en Mercado Libre!', 'success');
     } catch (e) {
@@ -85,11 +96,35 @@ export default function PublicarMLModal({ phone, onClose }) {
                 <div style={{ fontSize: 14, fontWeight: 700, color: '#333' }}>{titulo}</div>
               </div>
 
+              {/* Categoría detectada automáticamente */}
               <div className="form-group">
-                <label className="form-label">Categoría en Mercado Libre</label>
-                <select className="form-input" value={form.categoryId} onChange={e => set('categoryId', e.target.value)}>
-                  {ML_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
-                </select>
+                <label className="form-label">
+                  Categoría en Mercado Libre
+                  {loadingCat && <span style={{ fontSize: 11, color: 'var(--text3)', marginLeft: 8, fontWeight: 400 }}>Detectando...</span>}
+                </label>
+                {loadingCat ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: 'var(--bg3)', borderRadius: 8, fontSize: 13, color: 'var(--text3)' }}>
+                    <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} />
+                    Buscando la mejor categoría para este producto...
+                  </div>
+                ) : (
+                  <>
+                    <select className="form-input" value={form.categoryId} onChange={e => {
+                      const cat = categoriasML.find(c => c.id === e.target.value);
+                      set('categoryId', e.target.value);
+                      set('categoryNombre', cat?.nombre || '');
+                    }}>
+                      {categoriasML.map(c => (
+                        <option key={c.id} value={c.id}>{c.nombre}</option>
+                      ))}
+                    </select>
+                    {form.categoryId && (
+                      <div style={{ fontSize: 11, color: '#16a34a', marginTop: 4 }}>
+                        ✓ Categoría detectada automáticamente por Mercado Libre
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
 
               <div className="form-grid form-grid-2">
@@ -113,15 +148,13 @@ export default function PublicarMLModal({ phone, onClose }) {
               </div>
 
               <div className="form-group">
-  <label className="form-label">GTIN / Código de barras <span style={{color:'var(--text3)', fontWeight:400}}>(opcional)</span></label>
-  <input className="form-input" placeholder="Ej: 8806095076407 — está en la caja del producto"
-    value={form.gtin || ''} onChange={e => set('gtin', e.target.value)} />
-  {form.categoryId === 'MLA1055' && (
-  <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4 }}>
-    ⚠️ Sin este código Mercado Libre puede rechazar la publicación. Encontralo en la caja del producto o buscando el modelo en <a href="https://barcodelookup.com" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)' }}>barcodelookup.com</a>
-  </div>
-)}
-</div>
+                <label className="form-label">GTIN / Código de barras <span style={{color:'var(--text3)', fontWeight:400}}>(opcional)</span></label>
+                <input className="form-input" placeholder="Ej: 0194252671085 — está en la caja del producto"
+                  value={form.gtin || ''} onChange={e => set('gtin', e.target.value)} />
+                <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4 }}>
+                  ⚠️ Sin este código Mercado Libre puede rechazar la publicación. Encontralo en la caja del producto o buscando el modelo en <a href="https://barcodelookup.com" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)' }}>barcodelookup.com</a>
+                </div>
+              </div>
 
               <div style={{ background: 'var(--bg2)', borderRadius: 10, padding: '12px 14px', fontSize: 12, color: 'var(--text3)', lineHeight: 1.6 }}>
                 💡 La publicación se creará como <strong>Compra inmediata</strong> en ML. Podés editarla después desde tu cuenta de ML.
@@ -145,7 +178,7 @@ export default function PublicarMLModal({ phone, onClose }) {
         {!result && (
           <div className="modal-footer">
             <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
-            <button className="btn btn-primary" disabled={saving} onClick={handlePublicar}
+            <button className="btn btn-primary" disabled={saving || loadingCat} onClick={handlePublicar}
               style={{ background: '#fff200', color: '#333', border: 'none' }}>
               {saving ? 'Publicando...' : '🛒 Publicar en ML'}
             </button>

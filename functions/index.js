@@ -865,4 +865,33 @@ exports.mlWebhook = onRequest(async (req, res) => {
   }
 });
 
+// ── 16. Predictor de categoría ML ─────────────────────────────────────
+exports.mlPredecirCategoria = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError('unauthenticated', 'No autenticado');
+
+  const { titulo } = request.data;
+  if (!titulo) throw new HttpsError('invalid-argument', 'Falta el título');
+
+  const userDoc = await db.collection('users').doc(uid).get();
+  const businessId = userDoc.data().businessId;
+  const accessToken = await getMLToken(businessId);
+
+  const res = await fetch(
+    `https://api.mercadolibre.com/sites/MLA/domain_discovery/search?limit=3&q=${encodeURIComponent(titulo)}`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+  const data = await res.json();
+  
+  if (!Array.isArray(data) || data.length === 0) {
+    throw new HttpsError('not-found', 'No se encontró categoría');
+  }
+
+  return {
+    categorias: data.map(d => ({
+      id: d.category_id,
+      nombre: d.category_name,
+    })),
+  };
+});
 
