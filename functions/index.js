@@ -684,6 +684,7 @@ exports.mlPublicarProducto = onCall(async (request) => {
   const { phoneId, categoryId, precio, condicion, descripcion, gtin } = request.data;
   // condicion: 'new' | 'used'
   // categoryId: categoría de ML (ej: MLA1055 para celulares)
+  console.log('gtin recibido:', gtin);
 
   if (!phoneId || !categoryId || !precio || !condicion) {
     throw new HttpsError('invalid-argument', 'Faltan datos requeridos');
@@ -753,8 +754,8 @@ const body = {
   { id: 'FAMILY_NAME', value_name: phone.model },
   { id: 'IS_DUAL_SIM', value_id: '242084' },
   { id: 'CARRIER', value_id: '298335' },
-  ...(request.data.gtin 
-  ? [{ id: 'GTIN', value_name: request.data.gtin }]
+  ...(gtin 
+  ? [{ id: 'GTIN', value_name: gtin }]
   : phone.model.includes('iPhone') && getGTIN(phone.model)
     ? [{ id: 'GTIN', value_name: getGTIN(phone.model) }]
     : [{ id: 'EMPTY_GTIN_REASON', value_id: '17055161' }]),
