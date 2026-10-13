@@ -187,4 +187,4 @@ export default function PublicarMLModal({ phone, onClose }) {
       </div>
     </div>
   );
-}
+} 
