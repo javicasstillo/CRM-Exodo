@@ -40,7 +40,6 @@ export default function Sidebar({ page, onNavigate, onLogout, className = '', bu
       ).slice(0, 5)
     : [];
 
-    console.log('business plan en sidebar:', business?.plan);
 
   return (
     <>
