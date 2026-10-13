@@ -19,6 +19,38 @@ const PLANS = {
   empresa:     { name: "Genesys App — Plan Empresa",        amount: 60000 },
 };
 
+// ── Helper: traducir errores de ML a mensajes en español ──────────────
+function traducirErrorML(mlData) {
+  if (!mlData?.cause?.length) return mlData?.message || 'Error al publicar en Mercado Libre';
+  
+  const causas = mlData.cause;
+  
+  for (const causa of causas) {
+    if (causa.type !== 'error') continue;
+    
+    switch (causa.cause_id) {
+      case 7810:
+        return 'Mercado Libre requiere el código de barras (GTIN) del producto. Encontralo en la caja o en barcodelookup.com';
+      case 173:
+        return 'Mercado Libre requiere al menos una foto para publicar este tipo de producto';
+      case 126:
+        return 'No se puede publicar en esta categoría. Intentá con una categoría diferente';
+      case 369:
+        return 'Faltan datos obligatorios para publicar en esta categoría';
+      case 3701:
+        return 'El producto no fue encontrado en el catálogo de Mercado Libre. Intentá con otro nombre o categoría';
+      case 7711:
+        return 'El código de barras (GTIN) ingresado no es válido. Verificá el número e intentá de nuevo';
+      case 101:
+        return 'Uno de los atributos del producto tiene un valor inválido';
+      default:
+        return causa.message || 'Error al publicar en Mercado Libre';
+    }
+  }
+  
+  return mlData.message || 'Error al publicar en Mercado Libre';
+}
+
 // ── Crear plan en MP si no existe ─────────────────────────────────────
 async function getOrCreatePlan(planKey) {
   const mp = new MercadoPagoConfig({ accessToken: MP_ACCESS_TOKEN });
@@ -271,7 +303,6 @@ exports.checkTrialsScheduled = onSchedule("every 24 hours", async () => {
   const batch = db.batch();
   snap.docs.forEach(doc => batch.update(doc.ref, { status: "suspended" }));
   await batch.commit();
-  console.log(`Trials vencidos suspendidos: ${snap.size}`);
 });
 
 // ── 6. Estado del negocio ──────────────────────────────────────────────
@@ -436,7 +467,6 @@ exports.changePlan = onCall(async (request) => {
 
   if (biz.plan === newPlan) throw new HttpsError("invalid-argument", "Ya estás en ese plan");
 
-  // Cancelar suscripción anterior en MP si existe
   if (biz.mpSubscriptionId) {
     try {
       const mp = new MercadoPagoConfig({ accessToken: MP_ACCESS_TOKEN });
@@ -447,15 +477,12 @@ exports.changePlan = onCall(async (request) => {
       });
     } catch (e) {
       console.error('Error cancelando suscripción anterior:', e);
-      // Continuamos igual aunque falle la cancelación en MP
     }
   }
 
-  // Generar link de pago para el nuevo plan
   const planId = await getOrCreatePlan(newPlan);
   const initPoint = `https://www.mercadopago.com.ar/subscriptions/checkout?preapproval_plan_id=${planId}`;
 
-  // Actualizar el plan en Firestore (el status queda pending_payment hasta que MP confirme)
   await db.collection("businesses").doc(user.businessId).update({
     plan: newPlan,
     mpPlanKey: newPlan,
@@ -463,12 +490,7 @@ exports.changePlan = onCall(async (request) => {
     planChangedAt: admin.firestore.FieldValue.serverTimestamp(),
   });
 
-  return {
-    initPoint,
-    plan: newPlan,
-    amount: PLANS[newPlan].amount,
-  };
-  
+  return { initPoint, plan: newPlan, amount: PLANS[newPlan].amount };
 });
 
 // ── 11. Crear sucursal ─────────────────────────────────────────────────
@@ -481,7 +503,6 @@ exports.createBranch = onCall(async (request) => {
     throw new HttpsError("invalid-argument", "Faltan datos requeridos");
   }
 
-  // Verificar que el negocio maestro sea plan Empresa
   const userDoc = await db.collection("users").doc(uid).get();
   if (!userDoc.exists) throw new HttpsError("not-found", "Usuario no encontrado");
 
@@ -495,7 +516,6 @@ exports.createBranch = onCall(async (request) => {
   }
 
   try {
-    // Crear usuario admin de la sucursal en Firebase Auth
     const newUser = await admin.auth().createUser({
       email: adminEmail,
       password: adminPassword,
@@ -504,7 +524,6 @@ exports.createBranch = onCall(async (request) => {
 
     const branchId = newUser.uid;
 
-    // Crear perfil del usuario admin de la sucursal
     await db.collection("users").doc(branchId).set({
       name: adminName,
       email: adminEmail,
@@ -514,12 +533,11 @@ exports.createBranch = onCall(async (request) => {
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    // Crear el negocio de la sucursal vinculado al maestro
     await db.collection("businesses").doc(branchId).set({
       name: branchName,
       plan: 'empresa',
       status: 'active',
-      parentBusinessId: masterUser.businessId, // vínculo al maestro
+      parentBusinessId: masterUser.businessId,
       masterAdminId: uid,
       currency: masterBiz.currency || 'ARS',
       lowStockThreshold: masterBiz.lowStockThreshold || 3,
@@ -529,7 +547,6 @@ exports.createBranch = onCall(async (request) => {
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    // Registrar la sucursal en el negocio maestro
     await db.collection("businesses").doc(masterUser.businessId).update({
       branches: admin.firestore.FieldValue.arrayUnion({
         id: branchId,
@@ -540,7 +557,6 @@ exports.createBranch = onCall(async (request) => {
       }),
     });
 
-    // Enviar email de bienvenida al admin de la sucursal
     try {
       const resend = new Resend(RESEND_API_KEY);
       await resend.emails.send({
@@ -577,12 +593,11 @@ exports.createBranch = onCall(async (request) => {
   }
 });
 
-// ── Agregar al inicio del archivo, junto a las otras constantes ────────
 const ML_CLIENT_ID = process.env.ML_CLIENT_ID;
 const ML_SECRET    = process.env.ML_SECRET;
 const ML_REDIRECT  = 'https://app.genesys.com.ar/ml-callback';
 
-// ── Helper: obtener token de ML vigente (refresca si expiró) ──────────
+// ── Helper: obtener token de ML vigente ───────────────────────────────
 async function getMLToken(businessId) {
   const doc = await db.collection('ml_tokens').doc(businessId).get();
   if (!doc.exists) throw new Error('No hay cuenta de ML conectada');
@@ -590,7 +605,6 @@ async function getMLToken(businessId) {
   const data = doc.data();
   const now = Date.now();
 
-  // Si el token expira en menos de 5 minutos, lo refrescamos
   if (data.expiresAt - now < 5 * 60 * 1000) {
     const res = await fetch('https://api.mercadolibre.com/oauth/token', {
       method: 'POST',
@@ -631,7 +645,7 @@ exports.mlAuthUrl = onCall(async (request) => {
   return { url };
 });
 
-// ── 13. Callback de ML (recibe el code y guarda el token) ─────────────
+// ── 13. Callback de ML ────────────────────────────────────────────────
 exports.mlCallback = onRequest(async (req, res) => {
   const { code, state: businessId } = req.query;
 
@@ -664,7 +678,6 @@ exports.mlCallback = onRequest(async (req, res) => {
       connectedAt:  admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    // Marcar el negocio como conectado a ML
     await db.collection('businesses').doc(businessId).update({
       mlConnected: true,
       mlUserId: token.user_id,
@@ -683,9 +696,6 @@ exports.mlPublicarProducto = onCall(async (request) => {
   if (!uid) throw new HttpsError('unauthenticated', 'No autenticado');
 
   const { phoneId, categoryId, precio, condicion, descripcion, gtin } = request.data;
-  // condicion: 'new' | 'used'
-  // categoryId: categoría de ML (ej: MLA1055 para celulares)
-  console.log('gtin recibido:', gtin);
 
   if (!phoneId || !categoryId || !precio || !condicion) {
     throw new HttpsError('invalid-argument', 'Faltan datos requeridos');
@@ -695,7 +705,6 @@ exports.mlPublicarProducto = onCall(async (request) => {
   if (!userDoc.exists) throw new HttpsError('not-found', 'Usuario no encontrado');
   const businessId = userDoc.data().businessId;
 
-  // Obtener datos del producto
   const phoneDoc = await db.collection('phones').doc(phoneId).get();
   if (!phoneDoc.exists) throw new HttpsError('not-found', 'Producto no encontrado');
   const phone = phoneDoc.data();
@@ -703,72 +712,65 @@ exports.mlPublicarProducto = onCall(async (request) => {
   try {
     const accessToken = await getMLToken(businessId);
 
-    // Subir foto a imgbb si el producto tiene foto en base64
-// Subir foto a imgbb si el producto tiene foto en base64
-let mlPictures = [];
-if (phone.photo && phone.photo.startsWith('data:image')) {
-  try {
-    const base64Data = phone.photo.split(',')[1];
-    const formData = new FormData();
-    formData.append('image', base64Data);
-    const imgbbRes = await fetch(`https://api.imgbb.com/1/upload?key=${process.env.IMGBB_API_KEY}`, {
-      method: 'POST',
-      body: formData,
-    });
-    const imgbbData = await imgbbRes.json();
-    if (imgbbData.success) {
-      mlPictures = [{ source: imgbbData.data.url }];
-    } else {
-      console.error('imgbb error:', JSON.stringify(imgbbData));
+    // Subir foto a imgbb
+    let mlPictures = [];
+    if (phone.photo && phone.photo.startsWith('data:image')) {
+      try {
+        const base64Data = phone.photo.split(',')[1];
+        const formData = new FormData();
+        formData.append('image', base64Data);
+        const imgbbRes = await fetch(`https://api.imgbb.com/1/upload?key=${process.env.IMGBB_API_KEY}`, {
+          method: 'POST',
+          body: formData,
+        });
+        const imgbbData = await imgbbRes.json();
+        if (imgbbData.success) {
+          mlPictures = [{ source: imgbbData.data.url }];
+        }
+      } catch (e) {
+        console.error('Error subiendo foto a imgbb:', e);
+      }
     }
-  } catch (e) {
-    console.error('Error subiendo foto a imgbb:', e);
-  }
-}
 
-console.log('mlPictures:', JSON.stringify(mlPictures));
-
-    // Construir título del producto
     const titulo = phone.model
-  .replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s]/g, '')
-  .trim()
-  .slice(0, 60);
+      .replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s]/g, '')
+      .trim()
+      .slice(0, 60);
 
-const body = {
-  family_name: titulo,
-  category_id: categoryId,
-  price: Number(precio),
-  currency_id: 'ARS',
-  available_quantity: Number(phone.quantity) || 1,
-  buying_mode: 'buy_it_now',
-  condition: condicion,
-  listing_type_id: 'bronze',
-  description: { plain_text: descripcion || `${titulo} en perfectas condiciones.` },
-  sale_terms: [
-    { id: 'WARRANTY_TYPE', value_name: 'Garantía del vendedor' },
-    { id: 'WARRANTY_TIME', value_name: '90 días' },
-  ],
-  attributes: [
-  { id: 'BRAND', value_name: phone.model.includes('iPhone') || phone.model.includes('AirPods') || phone.model.includes('Apple') ? 'Apple' : phone.model.split(' ')[0] },
-  { id: 'MODEL', value_name: phone.model },
-  ...(categoryId === 'MLA1055' ? [
-  { id: 'FAMILY_NAME', value_name: phone.model },
-  { id: 'IS_DUAL_SIM', value_id: '242084' },
-  { id: 'CARRIER', value_id: '298335' },
-  { id: 'RAM', value_name: `${getRAM(phone.model)} GB` },
-  ...(gtin 
-  ? [{ id: 'GTIN', value_name: gtin }]
-  : phone.model.includes('iPhone') && getGTIN(phone.model)
-    ? [{ id: 'GTIN', value_name: getGTIN(phone.model) }]
-    : [{ id: 'EMPTY_GTIN_REASON', value_id: '17055161' }]),
-] : []),
-  { id: 'COLOR', value_name: phone.color || 'Negro' },
-  ...(phone.storage && phone.storage !== 'N/A' ? [{ id: 'INTERNAL_MEMORY', value_name: phone.storage.replace('GB', ' GB').trim() }] : []),
-],
-  ...(mlPictures.length > 0 ? { pictures: mlPictures } : {}),
-};
+    const body = {
+      family_name: titulo,
+      category_id: categoryId,
+      price: Number(precio),
+      currency_id: 'ARS',
+      available_quantity: Number(phone.quantity) || 1,
+      buying_mode: 'buy_it_now',
+      condition: condicion,
+      listing_type_id: 'bronze',
+      description: { plain_text: descripcion || `${titulo} en perfectas condiciones.` },
+      sale_terms: [
+        { id: 'WARRANTY_TYPE', value_name: 'Garantía del vendedor' },
+        { id: 'WARRANTY_TIME', value_name: '90 días' },
+      ],
+      attributes: [
+        { id: 'BRAND', value_name: phone.model.includes('iPhone') || phone.model.includes('AirPods') || phone.model.includes('Apple') ? 'Apple' : phone.model.split(' ')[0] },
+        { id: 'MODEL', value_name: phone.model },
+        ...(categoryId === 'MLA1055' ? [
+          { id: 'FAMILY_NAME', value_name: phone.model },
+          { id: 'IS_DUAL_SIM', value_id: '242084' },
+          { id: 'CARRIER', value_id: '298335' },
+          { id: 'RAM', value_name: `${getRAM(phone.model)} GB` },
+          ...(gtin
+            ? [{ id: 'GTIN', value_name: gtin }]
+            : phone.model.includes('iPhone') && getGTIN(phone.model)
+              ? [{ id: 'GTIN', value_name: getGTIN(phone.model) }]
+              : [{ id: 'EMPTY_GTIN_REASON', value_id: '17055161' }]),
+        ] : []),
+        { id: 'COLOR', value_name: phone.color || 'Negro' },
+        ...(phone.storage && phone.storage !== 'N/A' ? [{ id: 'INTERNAL_MEMORY', value_name: phone.storage.replace('GB', ' GB').trim() }] : []),
+      ],
+      ...(mlPictures.length > 0 ? { pictures: mlPictures } : {}),
+    };
 
-    console.log('ML body:', JSON.stringify(body));
     const mlRes = await fetch('https://api.mercadolibre.com/items', {
       method: 'POST',
       headers: {
@@ -780,11 +782,9 @@ const body = {
 
     const mlData = await mlRes.json();
     if (!mlRes.ok) {
-  console.error('ML API error:', JSON.stringify(mlData));
-  throw new Error(JSON.stringify(mlData));
-}
+      throw new Error(traducirErrorML(mlData));
+    }
 
-    // Guardar el ID de ML en el producto de Genesys
     await db.collection('phones').doc(phoneId).update({
       mlItemId:  mlData.id,
       mlStatus:  mlData.status,
@@ -798,21 +798,17 @@ const body = {
   }
 });
 
-// ── 15. Webhook de ML (notificaciones de ventas y cambios) ────────────
+// ── 15. Webhook de ML ─────────────────────────────────────────────────
 exports.mlWebhook = onRequest(async (req, res) => {
-  // ML hace GET para validar la URL
   if (req.method === 'GET') { res.status(200).send('ok'); return; }
   if (req.method !== 'POST') { res.status(405).send('Method not allowed'); return; }
 
   const { topic, resource } = req.body;
-  res.status(200).send('ok'); // Responder rápido a ML
+  res.status(200).send('ok');
 
   try {
     if (topic === 'orders_v2' || topic === 'orders') {
-      // Obtener la orden de ML
       const orderId = resource.replace('/orders/', '');
-
-      // Buscar el negocio que tiene este token
       const tokensSnap = await db.collection('ml_tokens').get();
 
       for (const tokenDoc of tokensSnap.docs) {
@@ -826,10 +822,8 @@ exports.mlWebhook = onRequest(async (req, res) => {
 
           if (!orderRes.ok) continue;
           const order = await orderRes.json();
-
           if (order.status !== 'paid') continue;
 
-          // Buscar el producto en Genesys por mlItemId
           for (const item of order.order_items) {
             const mlItemId = item.item.id;
 
@@ -845,17 +839,13 @@ exports.mlWebhook = onRequest(async (req, res) => {
             const phone = phoneDoc.data();
             const qty = Number(phone.quantity) || 1;
 
-            // Descontar stock
             if (qty > 1) {
               await phoneDoc.ref.update({ quantity: qty - 1, mlStatus: 'active' });
             } else {
               await phoneDoc.ref.update({ status: 'vendido', quantity: 0, mlStatus: 'closed' });
             }
-
-            console.log(`ML venta procesada: ${mlItemId} para negocio ${businessId}`);
           }
         } catch (tokenErr) {
-          // Este negocio no tiene token válido, skip
           continue;
         }
       }
@@ -882,7 +872,7 @@ exports.mlPredecirCategoria = onCall(async (request) => {
     { headers: { Authorization: `Bearer ${accessToken}` } }
   );
   const data = await res.json();
-  
+
   if (!Array.isArray(data) || data.length === 0) {
     throw new HttpsError('not-found', 'No se encontró categoría');
   }
@@ -894,4 +884,3 @@ exports.mlPredecirCategoria = onCall(async (request) => {
     })),
   };
 });
-
