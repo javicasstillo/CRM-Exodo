@@ -750,11 +750,13 @@ const body = {
   { id: 'BRAND', value_name: phone.model.includes('iPhone') || phone.model.includes('AirPods') || phone.model.includes('Apple') ? 'Apple' : phone.model.split(' ')[0] },
   { id: 'MODEL', value_name: phone.model },
   ...(categoryId === 'MLA1055' ? [
-    { id: 'FAMILY_NAME', value_name: phone.model },
-    { id: 'IS_DUAL_SIM', value_id: '242084' },
-    { id: 'CARRIER', value_id: '298335' },
-    ...(getGTIN(phone.model) ? [{ id: 'GTIN', value_name: getGTIN(phone.model) }] : [{ id: 'EMPTY_GTIN_REASON', value_id: '17055161' }]),
-  ] : []),
+  { id: 'FAMILY_NAME', value_name: phone.model },
+  { id: 'IS_DUAL_SIM', value_id: '242084' },
+  { id: 'CARRIER', value_id: '298335' },
+  ...(phone.model.includes('iPhone') && getGTIN(phone.model) 
+    ? [{ id: 'GTIN', value_name: getGTIN(phone.model) }] 
+    : [{ id: 'EMPTY_GTIN_REASON', value_id: '17055161' }]),
+] : []),
   { id: 'COLOR', value_name: phone.color || 'Negro' },
   ...(phone.storage && phone.storage !== 'N/A' ? [{ id: 'INTERNAL_MEMORY', value_name: phone.storage.replace('GB', ' GB').trim() }] : []),
 ],
