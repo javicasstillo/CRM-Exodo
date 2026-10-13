@@ -33,6 +33,7 @@ export default function PublicarMLModal({ phone, onClose }) {
     precio:      phone?.salePrice || '',
     condicion:   phone?.condition === 'Nuevo' ? 'new' : 'used',
     descripcion: '',
+    gtin:        '',
   });
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState(null);
@@ -50,12 +51,13 @@ export default function PublicarMLModal({ phone, onClose }) {
       const functions = getFunctions(undefined, 'us-central1');
       const mlPublicar = httpsCallable(functions, 'mlPublicarProducto');
       const res = await mlPublicar({
-        phoneId:     phone.id,
-        categoryId:  form.categoryId,
-        precio:      Number(form.precio),
-        condicion:   form.condicion,
-        descripcion: form.descripcion,
-      });
+  phoneId:     phone.id,
+  categoryId:  form.categoryId,
+  precio:      Number(form.precio),
+  condicion:   form.condicion,
+  descripcion: form.descripcion,
+  gtin:        form.gtin || '',
+});
       setResult(res.data);
       toast('¡Producto publicado en Mercado Libre!', 'success');
     } catch (e) {
