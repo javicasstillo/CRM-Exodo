@@ -4,6 +4,7 @@ const admin = require("firebase-admin");
 const { MercadoPagoConfig, PreApproval, PreApprovalPlan } = require("mercadopago");
 const { Resend } = require('resend');
 const { getGTIN } = require('./gtin_table');
+const { getRAM } = require('./ram_table');
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -754,7 +755,7 @@ const body = {
   { id: 'FAMILY_NAME', value_name: phone.model },
   { id: 'IS_DUAL_SIM', value_id: '242084' },
   { id: 'CARRIER', value_id: '298335' },
-  { id: 'RAM', value_name: '8 GB' },
+  { id: 'RAM', value_name: `${getRAM(phone.model)} GB` },
   ...(gtin 
   ? [{ id: 'GTIN', value_name: gtin }]
   : phone.model.includes('iPhone') && getGTIN(phone.model)
