@@ -29,7 +29,7 @@ export default function Sidebar({ page, onNavigate, onLogout, className = '', bu
     { id: 'sales',      label: 'Ventas',         icon: ShoppingCart },
     { id: 'expenses',   label: 'Gastos',         icon: DollarSign },
     { id: 'stats',      label: 'Estadísticas',   icon: TrendingUp },
-    ...(isSuperAdmin
+    ...(business?.plan === 'pyme' || business?.plan === 'empresa'
   ? [{ id: 'mercadolibre', label: 'Mercado Libre', icon: ShoppingBag }]
   : []),
   ];
