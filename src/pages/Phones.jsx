@@ -227,7 +227,7 @@ function PhotoUploader({ value, onChange }) {
   const ref = useRef();
   const handleFile = (e) => {
   const file = e.target.files[0]; if (!file) return;
-  if (file.size > 10 * 1024 * 1024) { alert('Máximo 10MB'); return; }
+  if (file.size > 3 * 1024 * 1024) { alert('Máximo 3MB'); return; }
   
   const img = new Image();
   const url = URL.createObjectURL(file);
