@@ -108,6 +108,25 @@ const CATEGORIES = {
     'Monitor Curvo 27"', 'Monitor Curvo 32"', 'Monitor Curvo 34" Ultrawide',
     'Monitor Apple Studio Display', 'Monitor Apple Pro Display XDR',
   ],
+
+  'Consola': [
+  'PlayStation 4', 'PlayStation 4 Slim', 'PlayStation 4 Pro',
+  'PlayStation 5', 'PlayStation 5 Digital',
+  'Xbox One', 'Xbox One S', 'Xbox One X',
+  'Xbox Series S', 'Xbox Series X',
+  'Nintendo Switch', 'Nintendo Switch Lite', 'Nintendo Switch OLED',
+  'Steam Deck', 'Steam Deck OLED',
+],
+'Joystick': [
+  'DualSense PS5', 'DualSense PS5 Edge',
+  'DualShock 4 PS4',
+  'Control Xbox Series', 'Control Xbox One',
+  'Joy-Con Nintendo Switch',
+  'Control Genérico',
+],
+'Juego': [
+  'Juego PS5', 'Juego PS4', 'Juego Xbox Series', 'Juego Xbox One', 'Juego Nintendo Switch',
+],
   'Parlante': [
     'JBL Go 4', 'JBL Go 4 Pro', 'JBL Flip 6', 'JBL Charge 5', 'JBL Xtreme 3',
     'Sony SRS-XB100', 'Sony SRS-XB13',
@@ -200,7 +219,7 @@ const CAT_ICON = {
   'Apple Watch': '⌚', 'AirPods': '🎧', 'Tablet': '📟',
   'Computadora': '💻', 'Parlante': '🔊', 'Auriculares': '🎧',
   'Cargador': '🔌', 'Battery Pack': '🔋', 'Funda': '🛡️',
-  'Vidrio Templado': '🔲', 'Accesorio': '🧩', 'Otro': '📦',
+  'Vidrio Templado': '🔲', 'Accesorio': '🧩', 'Otro': '📦','Consola': '🎮', 'Joystick': '🕹️','Juego': '💿',
 };
 
 const NEEDS_IMEI = ['iPhone', 'Samsung', 'Motorola', 'Xiaomi'];
