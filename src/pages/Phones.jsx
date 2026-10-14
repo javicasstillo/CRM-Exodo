@@ -226,12 +226,28 @@ const EMPTY = {
 function PhotoUploader({ value, onChange }) {
   const ref = useRef();
   const handleFile = (e) => {
-    const file = e.target.files[0]; if (!file) return;
-    if (file.size > 3 * 1024 * 1024) { alert('Máximo 3MB'); return; }
-    const reader = new FileReader();
-    reader.onload = (ev) => onChange(ev.target.result);
-    reader.readAsDataURL(file);
+  const file = e.target.files[0]; if (!file) return;
+  if (file.size > 10 * 1024 * 1024) { alert('Máximo 10MB'); return; }
+  
+  const img = new Image();
+  const url = URL.createObjectURL(file);
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    const MAX = 1200;
+    let w = img.width, h = img.height;
+    if (w > MAX || h > MAX) {
+      if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+      else { w = Math.round(w * MAX / h); h = MAX; }
+    }
+    canvas.width = w;
+    canvas.height = h;
+    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+    const compressed = canvas.toDataURL('image/jpeg', 0.8);
+    URL.revokeObjectURL(url);
+    onChange(compressed);
   };
+  img.src = url;
+};
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <label className="form-label">Foto del producto</label>
