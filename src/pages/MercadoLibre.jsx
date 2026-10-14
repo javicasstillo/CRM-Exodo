@@ -4,7 +4,7 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useApp } from '../context/AppContext';
 import { useToast } from '../context/ToastContext';
-import { ExternalLink, ShoppingBag, TrendingUp, Package, CheckCircle, XCircle, RefreshCw, Link } from 'lucide-react';
+import { ExternalLink, ShoppingBag, Package, CheckCircle, RefreshCw } from 'lucide-react';
 import logoMeli from '../assets/logoMeli.webp';
 
 const fmt = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(n || 0);
@@ -14,6 +14,7 @@ export default function MercadoLibre() {
   const toast = useToast();
   const [phones, setPhones] = useState([]);
   const [connecting, setConnecting] = useState(false);
+  const [sincronizando, setSincronizando] = useState(false);
 
   const mlConnected = !!business?.mlConnected;
   const mlUserId = business?.mlUserId;
@@ -37,9 +38,23 @@ export default function MercadoLibre() {
     }
   };
 
-  const publicados   = phones.filter(p => p.mlStatus === 'active');
-  const pausados     = phones.filter(p => p.mlStatus === 'paused');
-  const cerrados     = phones.filter(p => p.mlStatus === 'closed');
+  const handleSincronizar = async () => {
+    setSincronizando(true);
+    try {
+      const functions = getFunctions(undefined, 'us-central1');
+      const mlSincronizar = httpsCallable(functions, 'mlSincronizar');
+      const result = await mlSincronizar();
+      toast(`Sincronización completada — ${result.data.actualizados} publicaciones actualizadas`, 'success');
+    } catch (e) {
+      toast(e.message, 'error');
+    } finally {
+      setSincronizando(false);
+    }
+  };
+
+  const publicados = phones.filter(p => p.mlStatus === 'active');
+  const pausados   = phones.filter(p => p.mlStatus === 'paused');
+  const cerrados   = phones.filter(p => p.mlStatus === 'closed');
 
   return (
     <>
@@ -54,10 +69,16 @@ export default function MercadoLibre() {
           </div>
         </div>
         {mlConnected && (
-          <a href={`https://vendedores.mercadolibre.com.ar/publicaciones`} target="_blank" rel="noopener noreferrer"
-            className="btn btn-secondary" style={{ textDecoration: 'none' }}>
-            <ExternalLink size={14} /> Ver mis ventas en ML
-          </a>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button className="btn btn-secondary" disabled={sincronizando} onClick={handleSincronizar}>
+              <RefreshCw size={14} style={{ animation: sincronizando ? 'spin 1s linear infinite' : 'none' }} />
+              {sincronizando ? 'Sincronizando...' : 'Sincronizar con ML'}
+            </button>
+            <a href="https://vendedores.mercadolibre.com.ar/publicaciones" target="_blank" rel="noopener noreferrer"
+              className="btn btn-secondary" style={{ textDecoration: 'none' }}>
+              <ExternalLink size={14} /> Ver en ML
+            </a>
+          </div>
         )}
       </div>
 
@@ -106,10 +127,6 @@ export default function MercadoLibre() {
             <div className="card">
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
                 <h3 style={{ fontSize: 15, fontWeight: 700 }}>Mis publicaciones</h3>
-                <a href="https://www.mercadolibre.com.ar/ventas" target="_blank" rel="noopener noreferrer"
-                  className="btn btn-sm btn-secondary" style={{ textDecoration: 'none' }}>
-                  <ExternalLink size={12} /> Ver en ML
-                </a>
               </div>
 
               {phones.length === 0 ? (
@@ -160,7 +177,6 @@ export default function MercadoLibre() {
               )}
             </div>
 
-            {/* Desconectar */}
             <div style={{ marginTop: 16, textAlign: 'right' }}>
               <span style={{ fontSize: 12, color: 'var(--text3)' }}>
                 ¿Querés desconectar tu cuenta? Contactanos por WhatsApp.

@@ -884,3 +884,47 @@ exports.mlPredecirCategoria = onCall(async (request) => {
     })),
   };
 });
+
+// ── 17. Sincronizar estado de publicaciones ML ─────────────────────
+exports.mlSincronizar = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError('unauthenticated', 'No autenticado');
+
+  const userDoc = await db.collection('users').doc(uid).get();
+  const businessId = userDoc.data().businessId;
+  const accessToken = await getMLToken(businessId);
+
+  const phonesSnap = await db.collection('phones')
+    .where('businessId', '==', businessId)
+    .where('mlItemId', '!=', null)
+    .get();
+
+  if (phonesSnap.empty) return { actualizados: 0 };
+
+  let actualizados = 0;
+
+  for (const phoneDoc of phonesSnap.docs) {
+    const phone = phoneDoc.data();
+    if (!phone.mlItemId) continue;
+
+    try {
+      const res = await fetch(`https://api.mercadolibre.com/items/${phone.mlItemId}`, {
+        headers: { 'Authorization': `Bearer ${accessToken}` },
+      });
+
+      if (!res.ok) continue;
+      const item = await res.json();
+
+      await phoneDoc.ref.update({
+        mlStatus: item.status,
+        mlUrl: item.permalink,
+      });
+
+      actualizados++;
+    } catch (e) {
+      continue;
+    }
+  }
+
+  return { actualizados };
+});
