@@ -637,11 +637,11 @@ export default function Phones() {
                         </div>
                       )}
                       {/* Badge ML si ya está publicado */}
-                      {p.mlItemId && (
-                        <div style={{ position: 'absolute', bottom: p.batteryHealth ? 30 : 8, left: 8, background: '#fff200', color: '#333', fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20 }}>
-                          🛒 ML
-                        </div>
-                      )}
+                      {p.mlItemId && p.mlStatus !== 'closed' && (
+  <div style={{ position: 'absolute', bottom: p.batteryHealth ? 30 : 8, left: 8, background: '#fff200', color: '#333', fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20 }}>
+    🛒 ML
+  </div>
+)}
                     </div>
                     <div className="phone-card-body">
                       {isLowStock && (
@@ -684,8 +684,8 @@ export default function Phones() {
                             <button
                               className="btn btn-sm btn-secondary"
                               title={p.mlItemId ? 'Ya publicado en ML' : 'Publicar en Mercado Libre'}
-                              onClick={() => !p.mlItemId && setMlModal(p)}
-                              style={{ background: p.mlItemId ? '#fff200' : undefined, opacity: p.mlItemId ? 0.7 : 1, color: p.mlItemId ? '#333' : undefined }}>
+                              onClick={() => (!p.mlItemId || p.mlStatus === 'closed') && setMlModal(p)}
+                              style={{ background: (p.mlItemId && p.mlStatus !== 'closed') ? '#fff200' : undefined, opacity: (p.mlItemId && p.mlStatus !== 'closed') ? 0.7 : 1 }}>
                               🛒
                             </button>
                           )}
