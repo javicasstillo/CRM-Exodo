@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { phonesApi } from '../api';
-import { Plus, Search, Smartphone, Edit2, Trash2, X, Camera, ImageOff, Minus } from 'lucide-react';
+import { Plus, Search, Smartphone, Edit2, Trash2, X, Camera, ImageOff, Minus, Upload } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import { useApp } from '../context/AppContext';
 import PublicarMLModal from '../components/PublicarMLModal';
+import ImportarExcelModal from '../components/ImportarExcelModal';
 
 const fmt = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(n || 0);
 
@@ -475,6 +476,7 @@ export default function Phones() {
   const [modal, setModal] = useState(null);
   const [saving, setSaving] = useState(false);
   const [mlModal, setMlModal] = useState(null);
+  const [importarModal, setImportarModal] = useState(false);
   const toast = useToast();
   const { business } = useApp();
 
@@ -537,6 +539,10 @@ export default function Phones() {
           <p>{totalUnidades} unidades disponibles · {phones.filter(p => p.status === 'disponible').length} productos distintos</p>
         </div>
         <button className="btn btn-primary" id="onboarding-add-product" onClick={() => setModal('new')}><Plus size={15} /> Agregar producto</button>
+        <button className="btn btn-secondary" onClick={() => setImportarModal(true)}>
+  <Upload size={15} /> Importar Excel
+</button>
+<button className="btn btn-primary" id="onboarding-add-product" onClick={() => setModal('new')}><Plus size={15} /> Agregar producto</button>
       </div>
       <div className="page-body fade-up">
 
@@ -659,6 +665,7 @@ export default function Phones() {
       </div>
       {modal && <Modal phone={modal === 'new' ? null : modal} onClose={() => setModal(null)} onSave={handleSave} saving={saving} />}
       {mlModal && <PublicarMLModal phone={mlModal} onClose={() => setMlModal(null)} />}
+        {importarModal && <ImportarExcelModal onClose={() => setImportarModal(false)} onImportado={() => setImportarModal(false)} />}
     </>
   );
 }
