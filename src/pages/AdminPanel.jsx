@@ -78,13 +78,15 @@ export default function AdminPanel() {
   };
 
   const handleToggleStatus = async (biz) => {
-    const newStatus = biz.status === 'active' ? 'suspended' : 'active';
-    const label = newStatus === 'active' ? 'activado' : 'suspendido';
-    try {
-      await updateDoc(doc(db, 'businesses', biz.id), { status: newStatus });
-      toast(`${biz.name} ${label}`, newStatus === 'active' ? 'success' : 'warning');
-    } catch (e) { toast(e.message, 'error'); }
-  };
+  const newStatus = biz.status === 'active' ? 'suspended' : 'active';
+  const accion = newStatus === 'active' ? 'activar' : 'suspender';
+  if (!confirm(`¿Querés ${accion} a ${biz.name}?`)) return;
+  const label = newStatus === 'active' ? 'activado' : 'suspendido';
+  try {
+    await updateDoc(doc(db, 'businesses', biz.id), { status: newStatus });
+    toast(`${biz.name} ${label}`, newStatus === 'active' ? 'success' : 'warning');
+  } catch (e) { toast(e.message, 'error'); }
+};
 
   const handleGuardarNota = async () => {
     setGuardandoNota(true);
