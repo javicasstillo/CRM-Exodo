@@ -534,16 +534,19 @@ export default function Phones() {
   return (
     <>
       <div className="page-header">
-        <div>
-          <h2>Stock</h2>
-          <p>{totalUnidades} unidades disponibles · {phones.filter(p => p.status === 'disponible').length} productos distintos</p>
-        </div>
-        <button className="btn btn-primary" id="onboarding-add-product" onClick={() => setModal('new')}><Plus size={15} /> Agregar producto</button>
-        <button className="btn btn-secondary" onClick={() => setImportarModal(true)}>
-  <Upload size={15} /> Importar Excel
-</button>
-<button className="btn btn-primary" id="onboarding-add-product" onClick={() => setModal('new')}><Plus size={15} /> Agregar producto</button>
-      </div>
+  <div>
+    <h2>Stock</h2>
+    <p>{totalUnidades} unidades disponibles · {phones.filter(p => p.status === 'disponible').length} productos distintos</p>
+  </div>
+  <div style={{ display: 'flex', gap: 10 }}>
+    <button className="btn btn-secondary" onClick={() => setImportarModal(true)}>
+      <Upload size={15} /> Importar Excel
+    </button>
+    <button className="btn btn-primary" id="onboarding-add-product" onClick={() => setModal('new')}>
+      <Plus size={15} /> Agregar producto
+    </button>
+  </div>
+</div>
       <div className="page-body fade-up">
 
         <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
