@@ -118,7 +118,7 @@ export default function MercadoLibre() {
               </div>
               <div className="stat-card">
                 <div className="stat-icon" style={{ background: 'var(--bg3)', color: 'var(--text3)' }}><ShoppingBag size={16} /></div>
-                <div className="stat-label">Vendidas en ML</div>
+                <div className="stat-label">Finalizadas en ML</div>
                 <div className="stat-value">{cerrados.length}</div>
               </div>
             </div>
