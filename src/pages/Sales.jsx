@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { salesApi, phonesApi, buyersApi } from '../api';
-import { Plus, Search, ShoppingCart, Edit2, Trash2, X, Download, RefreshCw } from 'lucide-react';
+import { Banknote, Smartphone, CreditCard, Calendar, Bitcoin, Shuffle, RefreshCw} from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import * as XLSX from 'xlsx';
@@ -519,7 +519,15 @@ export default function Sales() {
   const totalIngresos = sales.filter(s => s.status === 'completada').reduce((a, s) => a + Number(s.salePrice || 0), 0);
   const totalGanancia = sales.filter(s => s.status === 'completada').reduce((a, s) => a + (Number(s.salePrice || 0) - Number(s.costPrice || 0)), 0);
   const statusBadge = { completada: 'badge-green', pendiente: 'badge-yellow', cancelada: 'badge-red' };
-  const payIcon = { 'Efectivo': '💵', 'Transferencia': '📲', 'Cuotas con tarjeta': '💳', 'Cuotas sin tarjeta': '📅', 'Cripto': '₿', 'Mixto': '🔀', 'Canje': '🔄' };
+  const payIcon = {
+  'Efectivo':            <Banknote size={13} color="var(--text2)" />,
+  'Transferencia':       <Smartphone size={13} color="var(--text2)" />,
+  'Cuotas con tarjeta':  <CreditCard size={13} color="var(--text2)" />,
+  'Cuotas sin tarjeta':  <Calendar size={13} color="var(--text2)" />,
+  'Cripto':              <Bitcoin size={13} color="var(--text2)" />,
+  'Mixto':               <Shuffle size={13} color="var(--text2)" />,
+  'Canje':               <RefreshCw size={13} color="var(--text2)" />,
+};
 
   return (
     <>
@@ -624,7 +632,9 @@ export default function Sales() {
                         <td style={{ fontWeight: 700, color: '#16a34a' }}>{fmt(ganancia)}</td>
                         <td>
                           <div style={{ fontSize: 12 }}>
-                            {payIcon[s.paymentMethod] || ''} {s.paymentMethod}
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+  {payIcon[s.paymentMethod]} {s.paymentMethod}
+</span>
                             {s.installments && <span style={{ color: 'var(--text3)' }}> · {s.installments}c</span>}
                             {esCanje && s.canjeData?.diferenciaMonto && (
                               <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 2 }}>
