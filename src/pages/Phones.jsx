@@ -264,7 +264,7 @@ function PhotoUploader({ value, onChange }) {
             </div>
         }
       </div>
-      {value && (
+      {value && (   
         <button type="button" className="btn btn-sm btn-danger" style={{ alignSelf: 'flex-start' }} onClick={() => onChange(null)}>
           <ImageOff size={12} /> Quitar foto
         </button>
