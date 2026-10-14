@@ -227,7 +227,7 @@ function PhotoUploader({ value, onChange }) {
   const ref = useRef();
   const handleFile = (e) => {
     const file = e.target.files[0]; if (!file) return;
-    if (file.size > 10 * 1024 * 1024) { alert('Máximo 10MB'); return; }
+    if (file.size > 3 * 1024 * 1024) { alert('Máximo 3MB'); return; }
     const reader = new FileReader();
     reader.onload = (ev) => onChange(ev.target.result);
     reader.readAsDataURL(file);
@@ -244,7 +244,7 @@ function PhotoUploader({ value, onChange }) {
           : <div style={{ textAlign: 'center', color: 'var(--text3)' }}>
               <Camera size={28} style={{ marginBottom: 8, opacity: 0.4 }} />
               <div style={{ fontSize: 13 }}>Clic para subir foto</div>
-              <div style={{ fontSize: 11 }}>JPG, PNG · máx 10MB</div>
+              <div style={{ fontSize: 11 }}>JPG, PNG · máx 3MB</div>
             </div>
         }
       </div>
