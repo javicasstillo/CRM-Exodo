@@ -1,6 +1,22 @@
 import { useState, useEffect } from 'react';
 import { salesApi, phonesApi, buyersApi } from '../api';
-import { Banknote, Smartphone, CreditCard, Calendar, Bitcoin, Shuffle, RefreshCw} from 'lucide-react';
+
+import {
+  Banknote,
+  Smartphone,
+  CreditCard,
+  Calendar,
+  Bitcoin,
+  Shuffle,
+  RefreshCw,
+  Download,
+  X,
+  Plus,
+  Search,
+  ShoppingCart,
+  Edit2,
+  Trash2
+} from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import * as XLSX from 'xlsx';
