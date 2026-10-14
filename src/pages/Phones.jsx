@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { phonesApi } from '../api';
-import { Plus, Search, Smartphone, Edit2, Trash2, X, Camera, ImageOff, Minus, Upload } from 'lucide-react';
+import {  Plus, Search, Smartphone, Edit2, Trash2, X, Camera, ImageOff, Minus, Watch, Headphones, Tablet, Laptop, Volume2, Plug, Battery, Shield, Layers, Puzzle, Gamepad2, Gamepad, Disc, Package, Upload } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import { useApp } from '../context/AppContext';
 import PublicarMLModal from '../components/PublicarMLModal';
@@ -215,11 +215,30 @@ const CONDITIONS = ['Nuevo', 'Como nuevo', 'Excelente', 'Muy bueno', 'Bueno', 'R
 const COLORS = ['Negro', 'Blanco', 'Rojo', 'Azul', 'Celeste', 'Verde', 'Amarillo', 'Rosa', 'Morado', 'Gris', 'Dorado', 'Natural', 'Titanio', 'Starlight', 'Midnight', 'Otro'];
 
 const CAT_ICON = {
-  'iPhone': '📱', 'Samsung': '📱', 'Motorola': '📱', 'Xiaomi': '📱',
-  'Apple Watch': '⌚', 'AirPods': '🎧', 'Tablet': '📟',
-  'Computadora': '💻', 'Parlante': '🔊', 'Auriculares': '🎧',
-  'Cargador': '🔌', 'Battery Pack': '🔋', 'Funda': '🛡️',
-  'Vidrio Templado': '🔲', 'Accesorio': '🧩', 'Otro': '📦','Consola': '🎮', 'Joystick': '🕹️','Juego': '💿',
+  'iPhone':          Smartphone,
+  'Samsung':         Smartphone,
+  'Motorola':        Smartphone,
+  'Xiaomi':          Smartphone,
+  'Apple Watch':     Watch,
+  'AirPods':         Headphones,
+  'Tablet':          Tablet,
+  'Computadora':     Laptop,
+  'Parlante':        Volume2,
+  'Auriculares':     Headphones,
+  'Cargador':        Plug,
+  'Battery Pack':    Battery,
+  'Funda':           Shield,
+  'Vidrio Templado': Layers,
+  'Accesorio':       Puzzle,
+  'Consola':         Gamepad2,
+  'Joystick':        Gamepad,
+  'Juego':           Disc,
+  'Otro':            Package,
+};
+
+const CatIcon = ({ cat, size = 14 }) => {
+  const Icon = CAT_ICON[cat] || Package;
+  return <Icon size={size} />;
 };
 
 const NEEDS_IMEI = ['iPhone', 'Samsung', 'Motorola', 'Xiaomi'];
@@ -363,12 +382,12 @@ function Modal({ phone, onClose, onSave, saving }) {
             <label className="form-label">Categoría</label>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {Object.keys(CATEGORIES).map(cat => (
-                <button key={cat} type="button"
-                  className={`btn btn-sm ${form.category === cat ? 'btn-primary' : 'btn-secondary'}`}
-                  onClick={() => handleCategory(cat)}>
-                  {CAT_ICON[cat]} {cat}
-                </button>
-              ))}
+  <button key={cat} type="button"
+    className={`btn btn-sm ${form.category === cat ? 'btn-primary' : 'btn-secondary'}`}
+    onClick={() => handleCategory(cat)}>
+    <CatIcon cat={cat} size={12} /> {cat}
+  </button>
+))}
             </div>
           </div>
 
@@ -585,12 +604,12 @@ export default function Phones() {
       <div className="page-body fade-up">
 
         <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-          {catsEnUso.map(cat => (
-            <button key={cat} className={`btn btn-sm ${filterCat === cat ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setFilterCat(cat)}>
-              {cat === 'todas' ? 'Todas' : `${CAT_ICON[cat] || '📦'} ${cat}`}
-            </button>
-          ))}
-        </div>
+  {catsEnUso.map(cat => (
+    <button key={cat} className={`btn btn-sm ${filterCat === cat ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setFilterCat(cat)}>
+      {cat === 'todas' ? 'Todas' : <><CatIcon cat={cat} size={12} /> {cat}</>}
+    </button>
+  ))}
+</div>
 
         <div className="toolbar">
           <div className="search-box">
@@ -618,14 +637,14 @@ export default function Phones() {
                     <div className="phone-card-img" style={{ position: 'relative', overflow: 'hidden' }}>
                       {p.photo
                         ? <img src={p.photo} alt={p.model} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-                        : <Smartphone size={44} color="var(--text3)" />
+                        : <CatIcon cat={cat} size={44} />
                       }
                       <div style={{ position: 'absolute', top: 8, right: 8 }}>
                         <span className={`badge ${badgeStatus(p.status)}`}>{labelStatus[p.status] || p.status}</span>
                       </div>
                       <div style={{ position: 'absolute', top: 8, left: 8 }}>
-                        <span className="badge badge-blue">{CAT_ICON[cat] || '📦'} {cat}</span>
-                      </div>
+  <span className="badge badge-blue"><CatIcon cat={cat} size={12} /> {cat}</span>
+</div>
                       {showQty && p.status === 'disponible' && (
                         <div style={{ position: 'absolute', bottom: 8, right: 8, background: isLowStock ? 'rgba(239,68,68,0.9)' : 'rgba(0,0,0,0.7)', color: '#fff', fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 20 }}>
                           x{qty} {isLowStock ? '⚠️' : ''}
