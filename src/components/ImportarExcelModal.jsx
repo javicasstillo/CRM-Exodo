@@ -18,6 +18,7 @@ const CAMPOS_GENESYS = [
   { key: 'batteryHealth',label: 'Batería (%)',        required: false },
   { key: 'quantity',     label: 'Cantidad',          required: false },
   { key: 'notes',        label: 'Notas',             required: false },
+  { key: 'imageUrl',     label: 'URL de foto',       required: false },
 ];
 
 const IGNORAR = '-- Ignorar columna --';
@@ -143,7 +144,7 @@ export default function ImportarExcelModal({ onClose, onImportado }) {
           quantity:      Number(getValor(fila, 'quantity')) || 1,
           notes:         getValor(fila, 'notes') || '',
           status:        'disponible',
-          photo:         null,
+          photo:          getValor(fila, 'imageUrl') || null,
         });
         count++;
       }
