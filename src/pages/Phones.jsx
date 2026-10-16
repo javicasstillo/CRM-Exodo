@@ -558,6 +558,18 @@ export default function Phones() {
     } catch (e) { toast(e.message, 'error'); } finally { setSaving(false); }
   };
 
+  const handleBorrarTodoElStock = async () => {
+  const confirmText = prompt('Para borrar todo el stock escribí: BORRAR TODO');
+  if (confirmText !== 'BORRAR TODO') {
+    if (confirmText !== null) toast('Texto incorrecto, operación cancelada', 'warning');
+    return;
+  }
+  try {
+    await Promise.all(phones.map(p => phonesApi.remove(p.id)));
+    toast('Todo el stock fue eliminado', 'warning');
+  } catch (e) { toast(e.message, 'error'); }
+};
+
   const exportarExcel = () => {
   const data = phones.map(p => ({
     'Categoría': p.category || '',
@@ -620,6 +632,9 @@ export default function Phones() {
     <p>{totalUnidades} unidades disponibles · {phones.filter(p => p.status === 'disponible').length} productos distintos</p>
   </div>
   <div style={{ display: 'flex', gap: 10 }}>
+    <button className="btn btn-danger" onClick={handleBorrarTodoElStock}>
+    <Trash2 size={15} /> Borrar todo
+  </button>
     <button className="btn btn-secondary" onClick={() => setImportarModal(true)}>
       <Upload size={15} /> Importar Excel
     </button>
