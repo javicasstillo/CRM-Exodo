@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getFirestore, collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
+import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
 import { initializeApp, getApps } from 'firebase/app';
 
 const firebaseConfig = {
@@ -15,6 +15,13 @@ const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 const fmt = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(n || 0);
+
+const fmtPrice = (price, currency) => {
+  if (currency === 'USD') {
+    return `USD ${new Intl.NumberFormat('es-AR', { minimumFractionDigits: 0 }).format(price || 0)}`;
+  }
+  return fmt(price);
+};
 
 const CAT_ICON = {
   'iPhone': '📱', 'Samsung': '📱', 'Motorola': '📱', 'Xiaomi': '📱',
@@ -70,7 +77,9 @@ function ProductModal({ product, business, onClose }) {
               <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: '#94a3b8', marginBottom: 4 }}>{product.category}</div>
               <h2 style={{ fontSize: 22, fontWeight: 800, color: '#0f1729', margin: 0, lineHeight: 1.2 }}>{product.model}</h2>
             </div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: '#0d6efd', textAlign: 'right', flexShrink: 0, marginLeft: 12 }}>{fmt(product.salePrice)}</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: '#0d6efd', textAlign: 'right', flexShrink: 0, marginLeft: 12 }}>
+              {fmtPrice(product.salePrice, product.currency)}
+            </div>
           </div>
 
           {/* Tags */}
@@ -164,7 +173,9 @@ function ProductCard({ product, business, onClick }) {
           {[product.storage !== 'N/A' && product.storage, product.color].filter(Boolean).join(' · ')}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ fontSize: 17, fontWeight: 800, color: '#0d6efd' }}>{fmt(product.salePrice)}</div>
+          <div style={{ fontSize: 17, fontWeight: 800, color: '#0d6efd' }}>
+            {fmtPrice(product.salePrice, product.currency)}
+          </div>
           <div style={{ background: '#f0fdf4', color: '#16a34a', fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 20, border: '1px solid #bbf7d0' }}>Disponible</div>
         </div>
       </div>
@@ -181,7 +192,6 @@ export default function Catalog() {
   const [filterCat, setFilterCat] = useState('todas');
   const [selected, setSelected] = useState(null);
 
-  // Obtener slug de la URL
   const slug = window.location.pathname.split('/catalogo/')[1]?.split('/')[0];
 
   useEffect(() => {
@@ -191,14 +201,12 @@ export default function Catalog() {
 
   const loadCatalog = async () => {
     try {
-      // Buscar negocio por slug
       const bizSnap = await getDocs(query(collection(db, 'businesses'), where('slug', '==', slug)));
       if (bizSnap.empty) { setError('Tienda no encontrada'); setLoading(false); return; }
 
       const bizData = { id: bizSnap.docs[0].id, ...bizSnap.docs[0].data() };
       setBusiness(bizData);
 
-      // Cargar productos disponibles
       const prodsSnap = await getDocs(query(
         collection(db, 'phones'),
         where('businessId', '==', bizData.id),
