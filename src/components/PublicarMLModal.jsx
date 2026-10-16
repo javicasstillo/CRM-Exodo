@@ -155,7 +155,9 @@ export default function PublicarMLModal({ phone, onClose }) {
                   ⚠️ Sin este código Mercado Libre puede rechazar la publicación. Encontralo en la caja del producto o buscando el modelo en <a href="https://barcodelookup.com" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)' }}>barcodelookup.com</a>
                 </div>
               </div>
-
+                <div style={{ background: '#fff8f0', border: '1px solid #fed7aa', borderRadius: 10, padding: '12px 14px', fontSize: 12, color: '#9a3412', lineHeight: 1.6, marginBottom: 12 }}>
+                  ⚠️ <strong>Importante:</strong> No publiques productos réplica, falsificados ni uses marcas sin autorización. Esto puede resultar en la suspensión de tu cuenta de Mercado Libre.
+                </div>
               <div style={{ background: 'var(--bg2)', borderRadius: 10, padding: '12px 14px', fontSize: 12, color: 'var(--text3)', lineHeight: 1.6 }}>
                 💡 La publicación se creará como <strong>Compra inmediata</strong> en ML. Podés editarla después desde tu cuenta de ML.
               </div>
