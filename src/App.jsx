@@ -12,40 +12,40 @@ import Settings from './pages/Settings';
 import AdminPanel from './pages/AdminPanel';
 import Catalog from './pages/Catalog';
 import BranchPanel from './pages/BranchPanel';
-import MercadoLibre from './pages/MercadoLibre';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import OnboardingTour from './components/OnboardingTour';
-import { ToastProvider, useToast } from './context/ToastContext';
+import { ToastProvider } from './context/ToastContext';
 import { AppProvider, useApp } from './context/AppContext';
 import SubscriptionGate from './components/SubscriptionGate';
 import { Menu } from 'lucide-react';
+import MercadoLibre from './pages/MercadoLibre';
 
 const SUPER_ADMIN_UID = '5aHXAuMsBxPTlmyW9kDSM4tGXNX2';
 
 const PAGE_TITLES = {
-  dashboard:    'Panel',
-  phones:       'Stock',
-  buyers:       'Compradores',
-  sales:        'Ventas',
-  expenses:     'Gastos',
-  stats:        'Estadísticas',
-  settings:     'Configuración',
-  admin:        'Admin — Genesys',
-  branchPanel:  'Vista consolidada',
+  dashboard:   'Panel',
+  phones:      'Stock',
+  buyers:      'Compradores',
+  sales:       'Ventas',
+  expenses:    'Gastos',
+  stats:       'Estadísticas',
+  settings:    'Configuración',
+  admin:       'Admin — Genesys',
+  branchPanel: 'Vista consolidada',
   mercadolibre: 'Mercado Libre',
 };
 
 const PAGES = {
-  dashboard:    Dashboard,
-  phones:       Phones,
-  buyers:       Buyers,
-  sales:        Sales,
-  expenses:     Expenses,
-  stats:        Stats,
-  settings:     Settings,
-  admin:        AdminPanel,
-  branchPanel:  BranchPanel,
+  dashboard:   Dashboard,
+  phones:      Phones,
+  buyers:      Buyers,
+  sales:       Sales,
+  expenses:    Expenses,
+  stats:       Stats,
+  settings:    Settings,
+  admin:       AdminPanel,
+  branchPanel: BranchPanel,
   mercadolibre: MercadoLibre,
 };
 
@@ -71,8 +71,7 @@ function Skeleton() {
 }
 
 function AppShell({ user }) {
-  const { profile, business, loading: appLoading, isNewBusiness, setIsNewBusiness, branchVersion, refreshBusiness } = useApp();
-  const toast = useToast();
+  const { profile, business, loading: appLoading, isNewBusiness, setIsNewBusiness, branchVersion } = useApp();
   const [page, setPage]               = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [pageLoading, setPageLoading] = useState(false);
@@ -86,32 +85,18 @@ function AppShell({ user }) {
       setShowTour(true);
     }
   }, [appLoading, isNewBusiness]);
+  
 
   useEffect(() => {
     document.title = `${PAGE_TITLES[page] || 'Panel'} — ${business?.name || 'Genesys App'}`;
   }, [page, business]);
 
+ 
   useEffect(() => {
-    if (branchVersion === 0) return;
+    if (branchVersion === 0) return; // ignorar la carga inicial
     setPageLoading(true);
     setTimeout(() => setPageLoading(false), 400);
   }, [branchVersion]);
-
-  // ── Manejar callback de ML ──────────────────────────────────────────
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const ml = params.get('ml');
-    if (ml === 'success') {
-      window.history.replaceState({}, '', window.location.pathname);
-      refreshBusiness().then(() => {
-        toast('¡Cuenta de Mercado Libre conectada!', 'success');
-        setPage('mercadolibre');
-      });
-    } else if (ml === 'error') {
-      toast('Error al conectar con Mercado Libre', 'error');
-      window.history.replaceState({}, '', window.location.pathname);
-    }
-  }, []);
 
   if (appLoading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', flexDirection: 'column', gap: 16, background: 'var(--bg)' }}>
@@ -120,6 +105,7 @@ function AppShell({ user }) {
     </div>
   );
 
+ 
   const PageComponent = PAGES[page] || Dashboard;
   const isAdminPage = page === 'admin';
 
