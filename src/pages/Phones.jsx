@@ -5,6 +5,7 @@ import { useToast } from '../context/ToastContext';
 import { useApp } from '../context/AppContext';
 import PublicarMLModal from '../components/PublicarMLModal';
 import ImportarExcelModal from '../components/ImportarExcelModal';
+import * as XLSX from 'xlsx';
 
 const fmt = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(n || 0);
 
@@ -557,6 +558,29 @@ export default function Phones() {
     } catch (e) { toast(e.message, 'error'); } finally { setSaving(false); }
   };
 
+  const exportarExcel = () => {
+  const data = phones.map(p => ({
+    'Categoría': p.category || '',
+    'Modelo': p.model || '',
+    'Almacenamiento': p.storage || '',
+    'Color': p.color || '',
+    'Condición': p.condition || '',
+    'Estado': p.status || '',
+    'Cantidad': Number(p.quantity) || 1,
+    'IMEI': p.imei || '',
+    'Batería (%)': p.batteryHealth || '',
+    'Costo': Number(p.costPrice) || 0,
+    'Precio de venta': Number(p.salePrice) || 0,
+    'Moneda': p.currency || 'ARS',
+    'Notas': p.notes || '',
+  }));
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Stock');
+  XLSX.writeFile(wb, `stock-${business?.name || 'negocio'}-${new Date().toISOString().split('T')[0]}.xlsx`);
+  toast('Excel exportado correctamente', 'success');
+};
+
   const handleDelete = async (id) => {
     if (!confirm('¿Eliminar este producto?')) return;
     try {
@@ -598,6 +622,9 @@ export default function Phones() {
   <div style={{ display: 'flex', gap: 10 }}>
     <button className="btn btn-secondary" onClick={() => setImportarModal(true)}>
       <Upload size={15} /> Importar Excel
+    </button>
+    <button className="btn btn-secondary" onClick={exportarExcel}>
+      <Download size={15} /> Descargar Stock
     </button>
     <button className="btn btn-primary" id="onboarding-add-product" onClick={() => setModal('new')}>
       <Plus size={15} /> Agregar producto
