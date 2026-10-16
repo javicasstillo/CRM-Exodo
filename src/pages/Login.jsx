@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { login, getInvitation, registerWithInvitation } from '../firebase';
+import { getAuth, sendPasswordResetEmail } from 'firebase/auth';
 import { Eye, EyeOff, Check, ArrowLeft } from 'lucide-react';
 
-// Lee el código de invitación de la URL: /invite/CODIGO
 function getInviteCode() {
   const path = window.location.pathname;
   const match = path.match(/\/invite\/([a-z0-9]+)/i);
@@ -10,7 +10,7 @@ function getInviteCode() {
 }
 
 export default function Login() {
-  const [mode, setMode] = useState('login'); // 'login' | 'invite'
+  const [mode, setMode] = useState('login');
   const [invitation, setInvitation] = useState(null);
   const [inviteError, setInviteError] = useState('');
 
@@ -21,7 +21,10 @@ export default function Login() {
   const [show, setShow] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  // Detectar si es un link de invitación
+  const [resetMode, setResetMode] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetSent, setResetSent] = useState(false);
+
   useEffect(() => {
     const code = getInviteCode();
     if (!code) return;
@@ -65,7 +68,18 @@ export default function Login() {
     finally { setLoading(false); }
   };
 
-  // Pantalla de invitación
+  const handleReset = async (e) => {
+    e.preventDefault();
+    setLoading(true); setError('');
+    try {
+      const auth = getAuth();
+      await sendPasswordResetEmail(auth, resetEmail);
+      setResetSent(true);
+    } catch {
+      setError('No se encontró una cuenta con ese email');
+    } finally { setLoading(false); }
+  };
+
   if (mode === 'invite') {
     return (
       <div className="login-page">
@@ -155,19 +169,18 @@ export default function Login() {
     );
   }
 
-  // Pantalla de login normal
   return (
     <div className="login-page">
       <div className="login-card fade-up">
         <div className="login-logo">
-  <div style={{ margin: '0 auto 20px', width: 80, height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-    <img src="/GenesysLogo.webp" alt="Genesys" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-  </div>
-  <h1 style={{ fontFamily: 'Space Grotesk, sans-serif', fontSize: 24, fontWeight: 700, letterSpacing: -0.5, marginBottom: 6 }}>
-    Genesys <span style={{ color: 'var(--primary)' }}>App</span>
-  </h1>
-  <p style={{ fontSize: 13, color: 'var(--text3)' }}>Sistema de gestión</p>
-</div>
+          <div style={{ margin: '0 auto 20px', width: 80, height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <img src="/GenesysLogo.webp" alt="Genesys" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+          </div>
+          <h1 style={{ fontFamily: 'Space Grotesk, sans-serif', fontSize: 24, fontWeight: 700, letterSpacing: -0.5, marginBottom: 6 }}>
+            Genesys <span style={{ color: 'var(--primary)' }}>App</span>
+          </h1>
+          <p style={{ fontSize: 13, color: 'var(--text3)' }}>Sistema de gestión</p>
+        </div>
         <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div className="form-group">
             <label className="form-label">Email</label>
@@ -198,8 +211,53 @@ export default function Login() {
             style={{ width: '100%', justifyContent: 'center', padding: '12px', marginTop: 4, fontSize: 14 }}>
             {loading ? 'Ingresando...' : 'Ingresar'}
           </button>
+          <button type="button" onClick={() => { setResetMode(true); setError(''); setResetSent(false); setResetEmail(''); }}
+            style={{ background: 'none', border: 'none', color: 'var(--primary)', fontSize: 13, cursor: 'pointer', padding: 0, textAlign: 'center' }}>
+            ¿Olvidaste tu contraseña?
+          </button>
         </form>
       </div>
+
+      {resetMode && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setResetMode(false)}>
+          <div className="modal" style={{ maxWidth: 400 }}>
+            <div className="modal-header">
+              <h3>Recuperar contraseña</h3>
+              <button className="btn btn-sm btn-secondary" onClick={() => { setResetMode(false); setResetSent(false); setResetEmail(''); setError(''); }}>✕</button>
+            </div>
+            <div className="modal-body">
+              {resetSent ? (
+                <div style={{ textAlign: 'center', padding: '16px 0' }}>
+                  <div style={{ fontSize: 48, marginBottom: 12 }}>📧</div>
+                  <div style={{ fontWeight: 700, marginBottom: 8 }}>¡Email enviado!</div>
+                  <div style={{ fontSize: 13, color: 'var(--text3)' }}>
+                    Revisá tu bandeja de entrada y seguí las instrucciones para restablecer tu contraseña.
+                  </div>
+                </div>
+              ) : (
+                <form onSubmit={handleReset} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <p style={{ fontSize: 13, color: 'var(--text3)', margin: 0 }}>
+                    Ingresá tu email y te vamos a enviar un link para restablecer tu contraseña.
+                  </p>
+                  <div className="form-group">
+                    <label className="form-label">Email</label>
+                    <input className="form-input" type="email" placeholder="tu@email.com"
+                      value={resetEmail} onChange={e => { setResetEmail(e.target.value); setError(''); }} autoFocus />
+                  </div>
+                  {error && (
+                    <div style={{ background: '#fff1f1', border: '1px solid #fecaca', color: '#dc2626', padding: '10px 14px', borderRadius: 8, fontSize: 13 }}>
+                      {error}
+                    </div>
+                  )}
+                  <button type="submit" disabled={loading} className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}>
+                    {loading ? 'Enviando...' : 'Enviar link de recuperación'}
+                  </button>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
