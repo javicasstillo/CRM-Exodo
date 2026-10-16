@@ -208,13 +208,20 @@ exports.createSubscription = onCall(async (request) => {
 exports.mpWebhook = onRequest(async (req, res) => {
   if (req.method !== "POST") { res.status(405).send("Method not allowed"); return; }
 
-  const { type, data } = req.body;
-  if (type !== "subscription_preapproval") { res.status(200).send("ok"); return; }
+  const { type, data, topic, id } = req.body;
+
+// Soportar tanto Webhooks (type) como IPN (topic)
+const eventType = type || topic;
+const eventId = data?.id || id;
+
+if (eventType !== "subscription_preapproval" && eventType !== "payment") { 
+  res.status(200).send("ok"); return; 
+}
 
   try {
     const mp = new MercadoPagoConfig({ accessToken: MP_ACCESS_TOKEN });
     const preApproval = new PreApproval(mp);
-    const sub = await preApproval.get({ id: data.id });
+    const sub = await preApproval.get({ id: eventId });
 
     const bizSnap = await db.collection("businesses")
       .where("mpSubscriptionId", "==", sub.id)
