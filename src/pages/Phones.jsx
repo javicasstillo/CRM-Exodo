@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { phonesApi } from '../api';
-import {  Plus, Search, Smartphone, Edit2, Sparkles, Trash2, X, Camera, ImageOff, Minus, Watch, Headphones, Tablet, Laptop, Volume2, Plug, Battery, Shield, Layers, Puzzle, Gamepad2, Gamepad, Disc, Package, Upload } from 'lucide-react';
+import {  Plus, Download, Search, Smartphone, Edit2, Sparkles, Trash2, X, Camera, ImageOff, Minus, Watch, Headphones, Tablet, Laptop, Volume2, Plug, Battery, Shield, Layers, Puzzle, Gamepad2, Gamepad, Disc, Package, Upload } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import { useApp } from '../context/AppContext';
 import PublicarMLModal from '../components/PublicarMLModal';
