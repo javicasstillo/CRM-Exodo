@@ -227,11 +227,17 @@ export default function Catalog() {
 
   const categories = ['todas', ...new Set(products.map(p => p.category || 'Otro'))];
 
-  const filtered = products.filter(p => {
+  const filtered = products
+  .filter(p => {
     const q = search.toLowerCase();
     const matchQ = !q || p.model?.toLowerCase().includes(q) || p.category?.toLowerCase().includes(q) || p.color?.toLowerCase().includes(q);
     const matchCat = filterCat === 'todas' || (p.category || 'Otro') === filterCat;
     return matchQ && matchCat;
+  })
+  .sort((a, b) => {
+    const modelA = a.model?.toLowerCase() || '';
+    const modelB = b.model?.toLowerCase() || '';
+    return modelA.localeCompare(modelB, 'es', { numeric: true });
   });
 
   if (loading) return (

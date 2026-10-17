@@ -449,9 +449,18 @@ function Modal({ phone, onClose, onSave, saving }) {
             )}
             <div className="form-group">
               <label className="form-label">Color</label>
-              <select className="form-input" value={form.color} onChange={e => set('color', e.target.value)}>
-                {COLORS.map(c => <option key={c}>{c}</option>)}
-              </select>
+              <select className="form-input" value={COLORS.includes(form.color) ? form.color : 'Otro'} 
+  onChange={e => {
+    if (e.target.value === 'Otro') set('color', '');
+    else set('color', e.target.value);
+  }}>
+  {COLORS.map(c => <option key={c}>{c}</option>)}
+</select>
+{(!COLORS.includes(form.color) || form.color === '') && (
+  <input className="form-input" style={{ marginTop: 6 }} placeholder="Escribí el color..." 
+    value={form.color === 'Otro' ? '' : form.color} 
+    onChange={e => set('color', e.target.value)} autoFocus />
+)}
             </div>
             <div className="form-group">
               <label className="form-label">Condición</label>
