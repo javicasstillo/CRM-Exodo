@@ -30,7 +30,7 @@ const PAGE_TITLES = {
   sales:       'Ventas',
   expenses:    'Gastos',
   stats:       'Estadísticas',
-  settings:    'Configuración',
+  settings:    'Configuración',    
   admin:       'Admin — Genesys',
   branchPanel: 'Vista consolidada',
   mercadolibre: 'Mercado Libre',
