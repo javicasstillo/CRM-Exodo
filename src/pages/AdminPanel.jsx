@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { collection, onSnapshot, doc, updateDoc, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useToast } from '../context/ToastContext';
-import { Users, DollarSign, CheckCircle, XCircle, Clock, Search, Building2, Smartphone, ShoppingBag, MessageCircle, Activity, StickyNote, Plus, Minus } from 'lucide-react';
+import { Users, Globe, DollarSign, CheckCircle, XCircle, Clock, Search, Building2, Smartphone, ShoppingBag, MessageCircle, Activity, StickyNote, Plus, Minus } from 'lucide-react';
 
 const fmt = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(n || 0);
 
@@ -319,13 +319,22 @@ export default function AdminPanel() {
                       </button>
                     </td>
                     <td>
-                      <button
-                        className={`btn btn-sm ${biz.status === 'active' ? 'btn-danger' : 'btn-secondary'}`}
-                        onClick={() => handleToggleStatus(biz)}>
-                        {biz.status === 'active' ? <XCircle size={12} /> : <CheckCircle size={12} />}
-                        {biz.status === 'active' ? 'Suspender' : 'Activar'}
-                      </button>
-                    </td>
+  <div style={{ display: 'flex', gap: 6 }}>
+    {biz.slug && (
+      <a href={`/catalogo/${biz.slug}`} target="_blank" rel="noopener noreferrer"
+        className="btn btn-sm btn-secondary" title="Ver catálogo"
+        style={{ textDecoration: 'none' }}>
+        <Globe size={12} />
+      </a>
+    )}
+    <button
+      className={`btn btn-sm ${biz.status === 'active' ? 'btn-danger' : 'btn-secondary'}`}
+      onClick={() => handleToggleStatus(biz)}>
+      {biz.status === 'active' ? <XCircle size={12} /> : <CheckCircle size={12} />}
+      {biz.status === 'active' ? 'Suspender' : 'Activar'}
+    </button>
+  </div>
+</td>
                   </tr>
                 );
               })}
