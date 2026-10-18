@@ -212,6 +212,7 @@ export default function AdminPanel() {
                 <th>Última venta</th>
                 <th>ML</th>
                 <th>Nota</th>
+                <th>Catálogo</th>
                 <th>Acción</th>
               </tr>
             </thead>
@@ -319,21 +320,22 @@ export default function AdminPanel() {
                       </button>
                     </td>
                     <td>
-  <div style={{ display: 'flex', gap: 6 }}>
-    {biz.slug && (
-      <a href={`/catalogo/${biz.slug}`} target="_blank" rel="noopener noreferrer"
+  {biz.slug
+    ? <a href={`/catalogo/${biz.slug}`} target="_blank" rel="noopener noreferrer"
         className="btn btn-sm btn-secondary" title="Ver catálogo"
         style={{ textDecoration: 'none' }}>
         <Globe size={12} />
       </a>
-    )}
-    <button
-      className={`btn btn-sm ${biz.status === 'active' ? 'btn-danger' : 'btn-secondary'}`}
-      onClick={() => handleToggleStatus(biz)}>
-      {biz.status === 'active' ? <XCircle size={12} /> : <CheckCircle size={12} />}
-      {biz.status === 'active' ? 'Suspender' : 'Activar'}
-    </button>
-  </div>
+    : <span style={{ fontSize: 11, color: 'var(--text3)' }}>—</span>
+  }
+</td>
+<td>
+  <button
+    className={`btn btn-sm ${biz.status === 'active' ? 'btn-danger' : 'btn-secondary'}`}
+    onClick={() => handleToggleStatus(biz)}>
+    {biz.status === 'active' ? <XCircle size={12} /> : <CheckCircle size={12} />}
+    {biz.status === 'active' ? 'Suspender' : 'Activar'}
+  </button>
 </td>
                   </tr>
                 );
